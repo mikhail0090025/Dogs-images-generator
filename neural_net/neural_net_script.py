@@ -54,14 +54,10 @@ def get_models():
         keras.layers.Input(shape=(128,)),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
-        keras.layers.Dense(5*5*1024, use_bias=False),
+        keras.layers.Dense(2*2*512, use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
-        tf.keras.layers.Reshape((5, 5, 1024)),
-
-        tf.keras.layers.Conv2DTranspose(1024, 3, strides=(2, 2), padding='same', use_bias=False),
-        keras.layers.BatchNormalization(),
-        tf.keras.layers.LeakyReLU(),
+        tf.keras.layers.Reshape((2, 2, 512)),
 
         tf.keras.layers.Conv2DTranspose(512, 3, strides=(2, 2), padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
@@ -82,7 +78,7 @@ def get_models():
         tf.keras.layers.Conv2DTranspose(3, 3, strides=(1, 1), padding='same', use_bias=False, activation='sigmoid')
     ])
     discriminator_net = keras.models.Sequential([
-        keras.layers.Input(shape=(160, 160, 3)),
+        keras.layers.Input(shape=(64,64,3)),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
 
@@ -106,11 +102,7 @@ def get_models():
         # keras.layers.Dropout(0.3),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2D(1024, 3, strides=(2, 2), padding='same'),
         tf.keras.layers.Flatten(),
-        keras.layers.BatchNormalization(),
-        # keras.layers.Dropout(0.3),
-        tf.keras.layers.LeakyReLU(),
 
         keras.layers.Dense(1, activation='sigmoid'),
     ])
