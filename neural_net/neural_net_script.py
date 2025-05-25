@@ -54,40 +54,28 @@ def get_models():
         keras.layers.Input(shape=(128,)),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
-        keras.layers.Dense(10*10*512, use_bias=False),
+        keras.layers.Dense(5*5*1024, use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
-        tf.keras.layers.Reshape((10, 10, 512)),
+        tf.keras.layers.Reshape((5, 5, 1024)),
+
+        tf.keras.layers.Conv2DTranspose(1024, 3, strides=(2, 2), padding='same', use_bias=False),
+        keras.layers.BatchNormalization(),
+        tf.keras.layers.LeakyReLU(),
 
         tf.keras.layers.Conv2DTranspose(512, 3, strides=(2, 2), padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2DTranspose(512, 3, strides=(1, 1), padding='same', use_bias=False),
-        keras.layers.BatchNormalization(),
-        tf.keras.layers.LeakyReLU(),
-        
         tf.keras.layers.Conv2DTranspose(256, 3, strides=(2, 2), padding='same', use_bias=False),
-        keras.layers.BatchNormalization(),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2DTranspose(256, 3, strides=(1, 1), padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
         
         tf.keras.layers.Conv2DTranspose(128, 3, strides=(2, 2), padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2DTranspose(128, 3, strides=(1, 1), padding='same', use_bias=False),
-        keras.layers.BatchNormalization(),
-        tf.keras.layers.LeakyReLU(),
         
         tf.keras.layers.Conv2DTranspose(64, 3, strides=(2, 2), padding='same', use_bias=False),
-        keras.layers.BatchNormalization(),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2DTranspose(64, 3, strides=(1, 1), padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
         
@@ -95,42 +83,33 @@ def get_models():
     ])
     discriminator_net = keras.models.Sequential([
         keras.layers.Input(shape=(160, 160, 3)),
-
-        tf.keras.layers.Conv2D(64, 3, strides=(2, 2), padding='same'),
-        # keras.layers.Dropout(0.3),
+        keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2D(64, 3, strides=(1, 1), padding='same'),
+        tf.keras.layers.Conv2D(64, 3, strides=(2, 2), padding='same'),
+        keras.layers.BatchNormalization(),
         # keras.layers.Dropout(0.3),
         tf.keras.layers.LeakyReLU(),
 
         tf.keras.layers.Conv2D(128, 3, strides=(2, 2), padding='same'),
-        # keras.layers.Dropout(0.3),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2D(128, 3, strides=(1, 1), padding='same'),
+        keras.layers.BatchNormalization(),
         # keras.layers.Dropout(0.3),
         tf.keras.layers.LeakyReLU(),
 
         tf.keras.layers.Conv2D(256, 3, strides=(2, 2), padding='same'),
-        # keras.layers.Dropout(0.3),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2D(256, 3, strides=(1, 1), padding='same'),
+        keras.layers.BatchNormalization(),
         # keras.layers.Dropout(0.3),
         tf.keras.layers.LeakyReLU(),
 
         tf.keras.layers.Conv2D(512, 3, strides=(2, 2), padding='same'),
+        keras.layers.BatchNormalization(),
         # keras.layers.Dropout(0.3),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2D(512, 3, strides=(1, 1), padding='same'),
-        # keras.layers.Dropout(0.3),
-        tf.keras.layers.LeakyReLU(),
-
+        tf.keras.layers.Conv2D(1024, 3, strides=(2, 2), padding='same'),
         tf.keras.layers.Flatten(),
-
-        keras.layers.Dense(64),
+        keras.layers.BatchNormalization(),
+        # keras.layers.Dropout(0.3),
         tf.keras.layers.LeakyReLU(),
 
         keras.layers.Dense(1, activation='sigmoid'),
@@ -225,7 +204,7 @@ def main():
     gan_output = discriminator_net(generator_net(gan_input))
     gan = tf.keras.Model(gan_input, gan_output)
     print("Variables are defined")
-    gan.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.5), loss='binary_crossentropy')
+    gan.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.001), loss='binary_crossentropy')
 
 if __name__ == '__main__':
     main()
