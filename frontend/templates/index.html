@@ -4,11 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/1.33.1/plotly.min.js" integrity="sha512-V0j9LhrK9IMNdFYZqh+IqU4cjo7wdxyHNyH+L0td4HryBuZ7Oq6QxP2/CWr6TituX31+gv5PnolvERuTbz8UNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
     <div>
         <h3>Generated image</h3>
-        <img src="http://localhost:8001/generate" alt="Image loading error">
+        <img src="http://localhost:8001/generate" alt="Image loading error" width="320px" height="auto">
     </div>
+    <div>
+        <div id="loss_graph"></div>
+    </div>
+    <script>
+        function loadGraph() {
+            fetch('http://localhost:8001/graphic')
+                .then(response => response.json())
+                .then(data => {
+                    Plotly.newPlot('loss_graph', JSON.parse(data.fig_json), {});
+                })
+                .catch(error => {
+                    console.error('Error loading graphic:', error);
+                });
+        }
+
+        window.onload = loadGraph;
+    </script>
 </body>
 </html>
