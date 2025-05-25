@@ -91,7 +91,7 @@ def get_models():
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
         
-        tf.keras.layers.Conv2DTranspose(3, 3, strides=(1, 1), padding='same', use_bias=False, activation='tanh')
+        tf.keras.layers.Conv2DTranspose(3, 3, strides=(1, 1), padding='same', use_bias=False, activation='sigmoid')
     ])
     discriminator_net = keras.models.Sequential([
         keras.layers.Input(shape=(160, 160, 3)),
@@ -136,8 +136,8 @@ def get_models():
         keras.layers.Dense(1, activation='sigmoid'),
     ])
 
-    optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.01, beta_1=0.5)
-    optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.01, beta_1=0.5)
+    optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.5)
+    optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.5)
 
     generator_net.compile(optimizer=optimizer_g, loss='binary_crossentropy')
     discriminator_net.compile(optimizer=optimizer_d, loss='binary_crossentropy')
@@ -156,7 +156,7 @@ def generate_image():
     generated = generator_net.predict(noise, verbose=1)
     generated = generated[0]
     factor = max(generated.max(), abs(generated.min()))
-    generated = generated / factor
+    # generated = generated / factor
     print("Data min/max:", generated.min(), generated.max())
 
     if generated.min() < 0:
@@ -174,6 +174,8 @@ def go_one_epoch(batch_size, generator_net, discriminator_net, gan):
 
     noise = np.random.normal(0, 1, (batch_size, 128))
     fake_imgs = generator_net.predict(noise, verbose=1)
+    factor = max(fake_imgs.max(), abs(fake_imgs.min()))
+    # fake_imgs = fake_imgs / factor
 
     print("After normalization:", images.min(), images.max())
     print("Real imgs min/max:", real_imgs.min(), real_imgs.max())
@@ -223,7 +225,7 @@ def main():
     gan_output = discriminator_net(generator_net(gan_input))
     gan = tf.keras.Model(gan_input, gan_output)
     print("Variables are defined")
-    gan.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01, beta_1=0.5), loss='binary_crossentropy')
+    gan.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.5), loss='binary_crossentropy')
 
 if __name__ == '__main__':
     main()
