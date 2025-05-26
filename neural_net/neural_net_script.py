@@ -52,12 +52,14 @@ def get_models():
     global discriminator_net, generator_net
     generator_net = keras.models.Sequential([
         keras.layers.Input(shape=(128,)),
+        keras.layers.Dense(2*2*1024, use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
-        keras.layers.Dense(2*2*512, use_bias=False),
+        tf.keras.layers.Reshape((2,2,1024)),
+
+        tf.keras.layers.Conv2DTranspose(1024, 3, strides=(2, 2), padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
-        tf.keras.layers.Reshape((2, 2, 512)),
 
         tf.keras.layers.Conv2DTranspose(512, 3, strides=(2, 2), padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
@@ -66,49 +68,54 @@ def get_models():
         tf.keras.layers.Conv2DTranspose(256, 3, strides=(2, 2), padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
-        
+
         tf.keras.layers.Conv2DTranspose(128, 3, strides=(2, 2), padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
-        
+
         tf.keras.layers.Conv2DTranspose(64, 3, strides=(2, 2), padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
-        
+
         tf.keras.layers.Conv2DTranspose(3, 3, strides=(1, 1), padding='same', use_bias=False, activation='sigmoid')
     ])
     discriminator_net = keras.models.Sequential([
         keras.layers.Input(shape=(64,64,3)),
-        keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2D(64, 3, strides=(2, 2), padding='same'),
-        keras.layers.BatchNormalization(),
-        # keras.layers.Dropout(0.3),
+        tf.keras.layers.Conv2D(64, 5, strides=(2, 2), padding='same'),
+        #keras.layers.Dropout(0.2),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2D(128, 3, strides=(2, 2), padding='same'),
-        keras.layers.BatchNormalization(),
-        # keras.layers.Dropout(0.3),
+        tf.keras.layers.Conv2D(128, 5, strides=(2, 2), padding='same'),
+        #keras.layers.Dropout(0.2),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2D(256, 3, strides=(2, 2), padding='same'),
-        keras.layers.BatchNormalization(),
-        # keras.layers.Dropout(0.3),
+        tf.keras.layers.Conv2D(256, 5, strides=(2, 2), padding='same'),
+        #keras.layers.Dropout(0.1),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2D(512, 3, strides=(2, 2), padding='same'),
-        keras.layers.BatchNormalization(),
-        # keras.layers.Dropout(0.3),
+        tf.keras.layers.Conv2D(512, 5, strides=(2, 2), padding='same'),
+        #keras.layers.Dropout(0.1),
+        tf.keras.layers.LeakyReLU(),
+
+        tf.keras.layers.Conv2D(1024, 5, strides=(2, 2), padding='same'),
+        #keras.layers.Dropout(0.1),
         tf.keras.layers.LeakyReLU(),
 
         tf.keras.layers.Flatten(),
+
+        keras.layers.Dense(1024),
+        tf.keras.layers.LeakyReLU(),
+
+        keras.layers.Dense(64),
+        tf.keras.layers.LeakyReLU(),
 
         keras.layers.Dense(1, activation='sigmoid'),
     ])
 
     optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.5)
-    optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.5)
+    optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.0005, beta_1=0.5)
 
     generator_net.compile(optimizer=optimizer_g, loss='binary_crossentropy')
     discriminator_net.compile(optimizer=optimizer_d, loss='binary_crossentropy')
