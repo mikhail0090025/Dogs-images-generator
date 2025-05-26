@@ -69,11 +69,11 @@ def get_models():
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2DTranspose(128, 3, strides=(2, 2), padding='same', use_bias=False),
+        tf.keras.layers.Conv2DTranspose(192, 3, strides=(2, 2), padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2DTranspose(64, 3, strides=(2, 2), padding='same', use_bias=False),
+        tf.keras.layers.Conv2DTranspose(128, 3, strides=(2, 2), padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
 
@@ -87,7 +87,15 @@ def get_models():
         #keras.layers.Dropout(0.2),
         tf.keras.layers.LeakyReLU(),
 
+        tf.keras.layers.Conv2D(96, 5, strides=(1, 1), padding='same'),
+        #keras.layers.Dropout(0.2),
+        tf.keras.layers.LeakyReLU(),
+
         tf.keras.layers.Conv2D(128, 5, strides=(2, 2), padding='same'),
+        #keras.layers.Dropout(0.2),
+        tf.keras.layers.LeakyReLU(),
+
+        tf.keras.layers.Conv2D(192, 5, strides=(1, 1), padding='same'),
         #keras.layers.Dropout(0.2),
         tf.keras.layers.LeakyReLU(),
 
@@ -95,11 +103,19 @@ def get_models():
         #keras.layers.Dropout(0.1),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2D(512, 5, strides=(2, 2), padding='same'),
+        tf.keras.layers.Conv2D(384, 5, strides=(1, 1), padding='same'),
         #keras.layers.Dropout(0.1),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2D(1024, 5, strides=(2, 2), padding='same'),
+        tf.keras.layers.Conv2D(512, 3, strides=(2, 2), padding='same'),
+        #keras.layers.Dropout(0.1),
+        tf.keras.layers.LeakyReLU(),
+
+        tf.keras.layers.Conv2D(1024, 3, strides=(1, 1), padding='same'),
+        #keras.layers.Dropout(0.1),
+        tf.keras.layers.LeakyReLU(),
+
+        tf.keras.layers.Conv2D(2048, 3, strides=(2, 2), padding='same'),
         #keras.layers.Dropout(0.1),
         tf.keras.layers.LeakyReLU(),
 
@@ -108,14 +124,11 @@ def get_models():
         keras.layers.Dense(1024),
         tf.keras.layers.LeakyReLU(),
 
-        keras.layers.Dense(64),
-        tf.keras.layers.LeakyReLU(),
-
         keras.layers.Dense(1, activation='sigmoid'),
     ])
 
-    optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.5)
-    optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.0005, beta_1=0.5)
+    optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.00005, beta_1=0.5)
+    optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.00005, beta_1=0.5)
 
     generator_net.compile(optimizer=optimizer_g, loss='binary_crossentropy')
     discriminator_net.compile(optimizer=optimizer_d, loss='binary_crossentropy')
@@ -203,7 +216,7 @@ def main():
     gan_output = discriminator_net(generator_net(gan_input))
     gan = tf.keras.Model(gan_input, gan_output)
     print("Variables are defined")
-    gan.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.001), loss='binary_crossentropy')
+    gan.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.00005), loss='binary_crossentropy')
 
 if __name__ == '__main__':
     main()
