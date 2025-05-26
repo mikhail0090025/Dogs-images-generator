@@ -64,6 +64,22 @@ def pass_epochs_endpoint(epochs_count, batch_size):
         print(f"Error has occurred: {e}")
         return Response(f"Error has occurred: {e}", status_code=500)
 
+@app.post("/pass_epochs_discriminator")
+def pass_epochs_discriminator_endpoint(epochs_count, batch_size):
+    try:
+        if not epochs_count:
+            return Response({'error': 'No epochs_count provided'}, status_code=400)
+        if not batch_size:
+            return Response({'error': 'No batch_size provided'}, status_code=400)
+
+        print(f"Epochs count: {epochs_count}")
+        print(f"Batch size: {batch_size}")
+        asyncio.run(neural_net_script.go_epochs_discriminator(int(epochs_count), int(batch_size)))
+        return Response(f"{epochs_count} Epochs for discriminator were passed", status_code=200)
+    except Exception as e:
+        print(f"Error has occurred: {e}")
+        return Response(f"Error has occurred: {e}", status_code=500)
+
 @app.get('/graphic')
 def graphic():
     try:

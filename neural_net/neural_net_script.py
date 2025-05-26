@@ -81,37 +81,16 @@ def get_models():
     ])
     discriminator_net = keras.models.Sequential([
         keras.layers.Input(shape=(64,64,3)),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2D(64, 5, strides=(2, 2), padding='same'),
-        #keras.layers.Dropout(0.2),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2D(96, 5, strides=(1, 1), padding='same'),
-        #keras.layers.Dropout(0.2),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2D(128, 5, strides=(2, 2), padding='same'),
-        #keras.layers.Dropout(0.2),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2D(192, 5, strides=(1, 1), padding='same'),
-        #keras.layers.Dropout(0.2),
-        tf.keras.layers.LeakyReLU(),
 
         tf.keras.layers.Conv2D(256, 5, strides=(2, 2), padding='same'),
-        #keras.layers.Dropout(0.1),
+        #keras.layers.Dropout(0.2),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2D(384, 5, strides=(1, 1), padding='same'),
-        #keras.layers.Dropout(0.1),
+        tf.keras.layers.Conv2D(512, 5, strides=(2, 2), padding='same'),
+        #keras.layers.Dropout(0.2),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2D(512, 3, strides=(2, 2), padding='same'),
-        #keras.layers.Dropout(0.1),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2D(1024, 3, strides=(1, 1), padding='same'),
+        tf.keras.layers.Conv2D(1024, 3, strides=(2, 2), padding='same'),
         #keras.layers.Dropout(0.1),
         tf.keras.layers.LeakyReLU(),
 
@@ -119,16 +98,18 @@ def get_models():
         #keras.layers.Dropout(0.1),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Flatten(),
-
-        keras.layers.Dense(1024),
+        tf.keras.layers.Conv2D(2048, 3, strides=(1,1), padding='same'),
+        #keras.layers.Dropout(0.1),
         tf.keras.layers.LeakyReLU(),
+
+        tf.keras.layers.GlobalAveragePooling2D(),
+        tf.keras.layers.Flatten(),
 
         keras.layers.Dense(1, activation='sigmoid'),
     ])
 
-    optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.00005, beta_1=0.5)
-    optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.00005, beta_1=0.5)
+    optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.000002, beta_1=0.5)
+    optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.5)
 
     generator_net.compile(optimizer=optimizer_g, loss='binary_crossentropy')
     discriminator_net.compile(optimizer=optimizer_d, loss='binary_crossentropy')
@@ -165,11 +146,7 @@ def go_one_epoch(batch_size, generator_net, discriminator_net, gan):
 
     noise = np.random.normal(0, 1, (batch_size, 128))
     fake_imgs = generator_net.predict(noise, verbose=1)
-    factor = max(fake_imgs.max(), abs(fake_imgs.min()))
-    # fake_imgs = fake_imgs / factor
 
-    print("After normalization:", images.min(), images.max())
-    print("Real imgs min/max:", real_imgs.min(), real_imgs.max())
     print("Fake imgs min/max:", fake_imgs.min(), fake_imgs.max())
 
     d_loss_real = discriminator_net.train_on_batch(real_imgs, np.ones((batch_size, 1)))
@@ -183,6 +160,46 @@ def go_one_epoch(batch_size, generator_net, discriminator_net, gan):
     g_losses.append(g_loss)
 
     return d_loss, g_loss
+
+def go_one_epoch_generator(batch_size, generator_net, discriminator_net, gan):
+    global images, d_losses, g_losses
+    if images is None:
+        raise ValueError("Images are not loaded. Call get_global_variables() first.")
+
+    noise = np.random.normal(0, 1, (batch_size, 128))
+    fake_imgs = generator_net.predict(noise, verbose=1)
+
+    print("Fake imgs min/max:", fake_imgs.min(), fake_imgs.max())
+
+    noise = np.random.normal(0, 1, (batch_size, 128))
+    discriminator_net.trainable = False
+    g_loss = gan.train_on_batch(noise, np.ones((batch_size, 1)))
+    discriminator_net.trainable = True
+
+    g_losses.append(g_loss)
+
+    return g_loss
+
+def go_one_epoch_discriminator(batch_size, generator_net, discriminator_net, gan):
+    global images, d_losses, g_losses
+    if images is None:
+        raise ValueError("Images are not loaded. Call get_global_variables() first.")
+    idx = np.random.randint(0, images.shape[0], batch_size)
+    real_imgs = images[idx]
+
+    noise = np.random.normal(0, 1, (batch_size, 128))
+    fake_imgs = generator_net.predict(noise, verbose=1)
+
+    print("Fake imgs min/max:", fake_imgs.min(), fake_imgs.max())
+
+    d_loss_real = discriminator_net.train_on_batch(real_imgs, np.ones((batch_size, 1)))
+    d_loss_fake = discriminator_net.train_on_batch(fake_imgs, np.zeros((batch_size, 1)))
+    d_loss = 0.5 * (d_loss_real + d_loss_fake)
+
+    d_losses.append(d_loss)
+    g_losses.append(g_losses[-1])
+
+    return d_loss
 
 def plot_losses():
     fig = go.Figure(
@@ -206,6 +223,15 @@ def go_epochs(epochs_count, batch_size):
     for i in range(epochs_count):
         d_loss, g_loss = go_one_epoch(batch_size, generator_net, discriminator_net, gan)
         print(f"Epoch {i+1}/{epochs_count}: D Loss: {d_loss}, G Loss: {g_loss}")
+    print(f"{epochs_count} epochs passed!")
+
+def go_epochs_discriminator(epochs_count, batch_size):
+    global generator_net, discriminator_net, gan
+    if any(x is None for x in [generator_net, discriminator_net, gan]):
+        raise ValueError("Models are not initialized. Call main() first.")
+    for i in range(epochs_count):
+        d_loss = go_one_epoch_discriminator(batch_size, generator_net, discriminator_net, gan)
+        print(f"Epoch {i+1}/{epochs_count}: D Loss: {d_loss}")
     print(f"{epochs_count} epochs passed!")
 
 def main():
