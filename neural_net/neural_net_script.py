@@ -108,7 +108,7 @@ def get_models():
         keras.layers.Dense(1, activation='sigmoid'),
     ])
 
-    optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.000002, beta_1=0.5)
+    optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.5)
     optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.5)
 
     generator_net.compile(optimizer=optimizer_g, loss='binary_crossentropy')
@@ -149,12 +149,16 @@ def go_one_epoch(batch_size, generator_net, discriminator_net, gan):
 
     print("Fake imgs min/max:", fake_imgs.min(), fake_imgs.max())
 
+    generator_net.trainable = False
     d_loss_real = discriminator_net.train_on_batch(real_imgs, np.ones((batch_size, 1)))
     d_loss_fake = discriminator_net.train_on_batch(fake_imgs, np.zeros((batch_size, 1)))
+    generator_net.trainable = True
     d_loss = 0.5 * (d_loss_real + d_loss_fake)
 
+    discriminator_net.trainable = False
     noise = np.random.normal(0, 1, (batch_size, 128))
     g_loss = gan.train_on_batch(noise, np.ones((batch_size, 1)))
+    discriminator_net.trainable = True
 
     d_losses.append(d_loss)
     g_losses.append(g_loss)
@@ -192,8 +196,10 @@ def go_one_epoch_discriminator(batch_size, generator_net, discriminator_net, gan
 
     print("Fake imgs min/max:", fake_imgs.min(), fake_imgs.max())
 
+    generator_net.trainable = False
     d_loss_real = discriminator_net.train_on_batch(real_imgs, np.ones((batch_size, 1)))
     d_loss_fake = discriminator_net.train_on_batch(fake_imgs, np.zeros((batch_size, 1)))
+    generator_net.trainable = True
     d_loss = 0.5 * (d_loss_real + d_loss_fake)
 
     d_losses.append(d_loss)
@@ -242,7 +248,7 @@ def main():
     gan_output = discriminator_net(generator_net(gan_input))
     gan = tf.keras.Model(gan_input, gan_output)
     print("Variables are defined")
-    gan.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.00005), loss='binary_crossentropy')
+    gan.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.0005), loss='binary_crossentropy')
 
 if __name__ == '__main__':
     main()
