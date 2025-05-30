@@ -57,36 +57,53 @@ def get_models():
         tf.keras.layers.LeakyReLU(),
         tf.keras.layers.Reshape((2,2,1024)),
 
-        tf.keras.layers.Conv2DTranspose(1024, 3, strides=(2, 2), padding='same', use_bias=False),
+        # Первый слой: 2x2 → 4x4
+        tf.keras.layers.UpSampling2D((2, 2)),
+        tf.keras.layers.Conv2D(1024, 3, padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2DTranspose(512, 3, strides=(2, 2), padding='same', use_bias=False),
+        # Второй слой: 4x4 → 8x8
+        tf.keras.layers.UpSampling2D((2, 2)),
+        tf.keras.layers.Conv2D(512, 3, padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2DTranspose(256, 3, strides=(2, 2), padding='same', use_bias=False),
+        # Третий слой: 8x8 → 16x16
+        tf.keras.layers.UpSampling2D((2, 2)),
+        tf.keras.layers.Conv2D(256, 3, padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2DTranspose(192, 3, strides=(2, 2), padding='same', use_bias=False),
+        # Четвёртый слой: 16x16 → 32x32
+        tf.keras.layers.UpSampling2D((2, 2)),
+        tf.keras.layers.Conv2D(192, 3, padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2DTranspose(128, 3, strides=(2, 2), padding='same', use_bias=False),
+        # Пятый слой: 32x32 → 64x64
+        tf.keras.layers.UpSampling2D((2, 2)),
+        tf.keras.layers.Conv2D(128, 3, padding='same', use_bias=False),
         keras.layers.BatchNormalization(),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2DTranspose(3, 3, strides=(1, 1), padding='same', use_bias=False, activation='sigmoid')
+        # Шестой слой: 64x64 → 128x128
+        # tf.keras.layers.UpSampling2D((2, 2)),
+        # tf.keras.layers.Conv2D(64, 3, padding='same', use_bias=False),
+        # keras.layers.BatchNormalization(),
+        # tf.keras.layers.LeakyReLU(),
+
+        # Выходной слой: 128x128x3
+        tf.keras.layers.Conv2D(3, 3, padding='same', use_bias=False, activation='sigmoid')
     ])
     discriminator_net = keras.models.Sequential([
         keras.layers.Input(shape=(64,64,3)),
 
-        tf.keras.layers.Conv2D(256, 5, strides=(2, 2), padding='same'),
+        tf.keras.layers.Conv2D(256, 3, strides=(2, 2), padding='same'),
         #keras.layers.Dropout(0.2),
         tf.keras.layers.LeakyReLU(),
 
-        tf.keras.layers.Conv2D(512, 5, strides=(2, 2), padding='same'),
+        tf.keras.layers.Conv2D(512, 3, strides=(2, 2), padding='same'),
         #keras.layers.Dropout(0.2),
         tf.keras.layers.LeakyReLU(),
 
@@ -105,11 +122,17 @@ def get_models():
         tf.keras.layers.GlobalAveragePooling2D(),
         tf.keras.layers.Flatten(),
 
+        keras.layers.Dense(2048, activation="relu"),
+        keras.layers.Dense(1024, activation="relu"),
+        keras.layers.Dense(256, activation="relu"),
+        keras.layers.Dense(64, activation="relu"),
+        keras.layers.Dense(32, activation="relu"),
+
         keras.layers.Dense(1, activation='sigmoid'),
     ])
 
-    optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.5)
-    optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.5)
+    optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.0005, beta_1=0.5)
+    optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.0005, beta_1=0.5)
 
     generator_net.compile(optimizer=optimizer_g, loss='binary_crossentropy')
     discriminator_net.compile(optimizer=optimizer_d, loss='binary_crossentropy')
@@ -128,7 +151,7 @@ def generate_image():
     generated = generator_net.predict(noise, verbose=1)
     generated = generated[0]
     factor = max(generated.max(), abs(generated.min()))
-    # generated = generated / factor
+    generated = generated / factor
     print("Data min/max:", generated.min(), generated.max())
 
     if generated.min() < 0:
