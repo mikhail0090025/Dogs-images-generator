@@ -38,7 +38,7 @@ async def extract_zip(zip_path, extract_to):
 async def process_images(folder):
     global images
     all_files = os.listdir(folder)
-    max_files_count = 3000
+    max_files_count = 5000
     for i, filename in enumerate(all_files[:max_files_count]):
         try:
             path = os.path.join(folder, filename)

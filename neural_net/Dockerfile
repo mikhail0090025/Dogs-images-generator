@@ -2,7 +2,7 @@ FROM python:3.9-slim AS builder
 WORKDIR /app
 COPY neural_net/requirements.txt /app/
 RUN apt-get update && apt-get install -y curl && \
-    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu && \
     pip cache purge
 
 FROM python:3.9-slim

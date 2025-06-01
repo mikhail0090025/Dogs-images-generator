@@ -1,0 +1,1 @@
+docker builder prune --filter "until=24h"           # Delete cache that is older than X hours
