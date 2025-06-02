@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 # Глобальные переменные
-noise_size = 128
+noise_size = 512
 generator_net = None
 discriminator_net = None
 optimizer_D = None
@@ -124,15 +124,15 @@ class GeneratorModel(nn.Module):
         ])
         '''
         self.all_layers = nn.ModuleList([
-            nn.Linear(noise_size, 1024),
+            nn.Linear(noise_size, 1024, bias=False),
             nn.LeakyReLU(0.2),
             nn.Dropout(0.3),
 
-            nn.Linear(1024, 2 * 2 * 1024),
+            nn.Linear(1024, 2 * 2 * 1024, bias=False),
             nn.LeakyReLU(0.2),
             nn.Dropout(0.3),
 
-            nn.Linear(2 * 2 * 1024, 2 * 2 * 1024),
+            nn.Linear(2 * 2 * 1024, 2 * 2 * 1024, bias=False),
             nn.LeakyReLU(0.2),
             nn.Dropout(0.3),
 
@@ -200,9 +200,16 @@ class GeneratorModel(nn.Module):
             nn.Sigmoid(),
         ])
 
+        for layer in self.all_layers:
+            if isinstance(layer, nn.Linear):
+                nn.init.xavier_uniform_(layer.weight)
+
     def forward(self, x):
         for layer in self.all_layers:
             x = layer(x)
+            if isinstance(layer, nn.Upsample):
+                noise = torch.randn_like(x) * 0.2
+                x = x + noise
         return x
 
 class DiscriminatorModel(nn.Module):
@@ -213,35 +220,35 @@ class DiscriminatorModel(nn.Module):
             torch.nn.Conv2d(3, 64, 3, padding=1, stride=2),
             nn.BatchNorm2d(64),
             torch.nn.LeakyReLU(0.2),
-            nn.Dropout(0.3),
+            nn.Dropout(0.4),
 
             torch.nn.Conv2d(64, 128, 3, padding=1, stride=2),
             nn.BatchNorm2d(128),
             torch.nn.LeakyReLU(0.2),
-            nn.Dropout(0.3),
+            nn.Dropout(0.4),
 
             torch.nn.Conv2d(128, 256, 3, padding=1, stride=2),
             nn.BatchNorm2d(256),
             torch.nn.LeakyReLU(0.2),
-            nn.Dropout(0.3),
+            nn.Dropout(0.4),
 
-            torch.nn.Conv2d(256, 512, 3, padding=1, stride=2),
+            torch.nn.Conv2d(256, 512, 3, padding=1, stride=1),
             nn.BatchNorm2d(512),
             torch.nn.LeakyReLU(0.2),
-            nn.Dropout(0.3),
+            nn.Dropout(0.4),
 
-            torch.nn.Conv2d(512, 1024, 3, padding=1, stride=2),
+            torch.nn.Conv2d(512, 1024, 3, padding=1, stride=1),
             nn.BatchNorm2d(1024),
             torch.nn.LeakyReLU(0.2),
-            nn.Dropout(0.3),
+            nn.Dropout(0.4),
 
             nn.Flatten(),
 
-            nn.Linear(4096, 1024),
+            nn.Linear(4096*4*4, 2048),
             torch.nn.LeakyReLU(0.2),
-            nn.Dropout(0.3),
+            nn.Dropout(0.4),
 
-            nn.Linear(1024, 512),
+            nn.Linear(2048, 512),
             torch.nn.LeakyReLU(0.2),
 
             nn.Linear(512, 64),
@@ -274,7 +281,7 @@ def get_models():
     discriminator_net = DiscriminatorModel().to(device)
 
     optimizer_G = torch.optim.Adam(generator_net.parameters(), lr=0.0002, betas=(0.5, 0.999))
-    optimizer_D = torch.optim.Adam(discriminator_net.parameters(), lr=0.0002, betas=(0.5, 0.999))
+    optimizer_D = torch.optim.Adam(discriminator_net.parameters(), lr=0.00002, betas=(0.5, 0.999))
 
     print("Generator model structure:")
     print(generator_net)
