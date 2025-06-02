@@ -128,22 +128,35 @@ class GeneratorModel(nn.Module):
             nn.LeakyReLU(0.2),
             nn.Dropout(0.3),
 
-            nn.Linear(1024, 2 * 2 * 512),
+            nn.Linear(1024, 2 * 2 * 1024),
             nn.LeakyReLU(0.2),
             nn.Dropout(0.3),
 
-            nn.Linear(2 * 2 * 512, 2 * 2 * 512),
+            nn.Linear(2 * 2 * 1024, 2 * 2 * 1024),
             nn.LeakyReLU(0.2),
             nn.Dropout(0.3),
 
-            nn.Unflatten(1, (512, 2, 2)),
+            nn.Unflatten(1, (1024, 2, 2)),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(1024, 512, 3, padding=1),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(512, 512, 3, padding=1),  # 4x4 → 4x4
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(512, 512, 3, padding=1),  # 4x4 → 4x4
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2),
 
             nn.Upsample(scale_factor=2, mode='nearest'),
             nn.Conv2d(512, 256, 3, padding=1),
             nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(256, 256, 3, padding=1),  # 4x4 → 4x4
+            nn.Conv2d(256, 256, 3, padding=1),  # 8x8 → 8x8
             nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2),
 
@@ -152,7 +165,7 @@ class GeneratorModel(nn.Module):
             nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(128, 128, 3, padding=1),  # 8x8 → 8x8
+            nn.Conv2d(128, 128, 3, padding=1),  # 16x16 → 16x16
             nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2),
 
@@ -161,7 +174,7 @@ class GeneratorModel(nn.Module):
             nn.BatchNorm2d(64),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(64, 64, 3, padding=1),  # 16x16 → 16x16
+            nn.Conv2d(64, 64, 3, padding=1),  # 32x32 → 32x32
             nn.BatchNorm2d(64),
             nn.LeakyReLU(0.2),
 
@@ -170,20 +183,11 @@ class GeneratorModel(nn.Module):
             nn.BatchNorm2d(32),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(32, 32, 3, padding=1),  # 32x32 → 32x32
+            nn.Conv2d(32, 32, 3, padding=1),  # 64x64 → 64x64
             nn.BatchNorm2d(32),
             nn.LeakyReLU(0.2),
 
-            nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(32, 16, 3, padding=1),
-            nn.BatchNorm2d(16),
-            nn.LeakyReLU(0.2),
-
-            nn.Conv2d(16, 16, 3, padding=1),  # 64x64 → 64x64
-            nn.BatchNorm2d(16),
-            nn.LeakyReLU(0.2),
-
-            nn.Conv2d(16, 3, 3, padding=1),  # 64x64 → 64x64x3
+            nn.Conv2d(32, 3, 3, padding=1),  # 64x64 → 64x64x3
             nn.BatchNorm2d(3),
             nn.LeakyReLU(0.2),
 
