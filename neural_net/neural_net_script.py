@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 # Глобальные переменные
-noise_size = 256
+noise_size = 128
 generator_net = None
 discriminator_net = None
 optimizer_D = None
@@ -57,7 +57,7 @@ class GeneratorModel(nn.Module):
     def __init__(self, noise_size=noise_size):
         super(GeneratorModel, self).__init__()
         self.noise_size = noise_size
-
+        '''
         self.all_layers = nn.ModuleList([
             nn.Linear(noise_size, 1024),
             nn.LeakyReLU(0.2),
@@ -78,15 +78,7 @@ class GeneratorModel(nn.Module):
             nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(256, 256, 3, padding=1),  # 4x4 → 4x4
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2),
-
             nn.ConvTranspose2d(256, 128, 4, stride=2, padding=1),  # 4x4 → 8x8
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2),
-
-            nn.Conv2d(128, 128, 3, padding=1),  # 8x8 → 8x8
             nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2),
 
@@ -102,15 +94,7 @@ class GeneratorModel(nn.Module):
             nn.BatchNorm2d(64),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(64, 64, 3, padding=1),  # 16x16 → 16x16
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2),
-
             nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),  # 16x16 → 32x32
-            nn.BatchNorm2d(32),
-            nn.LeakyReLU(0.2),
-
-            nn.Conv2d(32, 32, 3, padding=1),  # 32x32 → 32x32
             nn.BatchNorm2d(32),
             nn.LeakyReLU(0.2),
 
@@ -126,6 +110,75 @@ class GeneratorModel(nn.Module):
             nn.BatchNorm2d(16),
             nn.LeakyReLU(0.2),
 
+            nn.Conv2d(16, 3, 3, padding=1),  # 64x64 → 64x64x3
+            nn.BatchNorm2d(3),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(3, 3, 3, padding=1),
+            nn.BatchNorm2d(3),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(3, 3, 3, padding=1),
+            nn.BatchNorm2d(3),
+            nn.Sigmoid(),
+        ])
+        '''
+        self.all_layers = nn.ModuleList([
+            nn.Linear(noise_size, 1024),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+
+            nn.Linear(1024, 2 * 2 * 512),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+
+            nn.Linear(2 * 2 * 512, 2 * 2 * 512),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+
+            nn.Unflatten(1, (512, 2, 2)),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(512, 256, 3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(256, 256, 3, padding=1),  # 4x4 → 4x4
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(256, 128, 3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(128, 128, 3, padding=1),  # 8x8 → 8x8
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(128, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(64, 64, 3, padding=1),  # 16x16 → 16x16
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(64, 32, 3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(32, 32, 3, padding=1),  # 32x32 → 32x32
+            nn.BatchNorm2d(32),
+            nn.LeakyReLU(0.2),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(32, 16, 3, padding=1),
+            nn.BatchNorm2d(16),
+            nn.LeakyReLU(0.2),
+
             nn.Conv2d(16, 16, 3, padding=1),  # 64x64 → 64x64
             nn.BatchNorm2d(16),
             nn.LeakyReLU(0.2),
@@ -134,14 +187,6 @@ class GeneratorModel(nn.Module):
             nn.BatchNorm2d(3),
             nn.LeakyReLU(0.2),
 
-            nn.Conv2d(3, 3, 3, padding=1),
-            nn.BatchNorm2d(3),
-            nn.LeakyReLU(0.2),
-            
-            nn.Conv2d(3, 3, 3, padding=1),
-            nn.BatchNorm2d(3),
-            nn.LeakyReLU(0.2),
-            
             nn.Conv2d(3, 3, 3, padding=1),
             nn.BatchNorm2d(3),
             nn.Sigmoid(),
@@ -156,52 +201,51 @@ class DiscriminatorModel(nn.Module):
 
     def __init__(self):
         super(DiscriminatorModel, self).__init__()
+        self.all_layers = nn.ModuleList([
+            torch.nn.Conv2d(3, 64, 3, padding=1, stride=2),
+            nn.BatchNorm2d(64),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
 
-        self.conv1 = torch.nn.Conv2d(3, 64, 3, padding=1, stride=2)
-        self.activation1 = torch.nn.LeakyReLU(0.2)
+            torch.nn.Conv2d(64, 128, 3, padding=1, stride=2),
+            nn.BatchNorm2d(128),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
 
-        self.conv2 = torch.nn.Conv2d(64, 128, 3, padding=1, stride=2)
-        self.activation2 = torch.nn.LeakyReLU(0.2)
+            torch.nn.Conv2d(128, 256, 3, padding=1, stride=2),
+            nn.BatchNorm2d(256),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
 
-        self.conv3 = torch.nn.Conv2d(128, 256, 3, padding=1, stride=2)
-        self.activation3 = torch.nn.LeakyReLU(0.2)
+            torch.nn.Conv2d(256, 512, 3, padding=1, stride=2),
+            nn.BatchNorm2d(512),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
 
-        self.conv4 = torch.nn.Conv2d(256, 512, 3, padding=1, stride=2)
-        self.activation4 = torch.nn.LeakyReLU(0.2)
+            torch.nn.Conv2d(512, 1024, 3, padding=1, stride=2),
+            nn.BatchNorm2d(1024),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
 
-        self.flatten = nn.Flatten()
+            nn.Flatten(),
 
-        self.linear1 = nn.Linear(8192, 2048)
-        self.activation5 = torch.nn.LeakyReLU(0.2)
+            nn.Linear(4096, 1024),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
 
-        self.linear2 = nn.Linear(2048, 512)
-        self.activation6 = torch.nn.LeakyReLU(0.2)
-        
-        self.linear3 = nn.Linear(512, 64)
-        self.activation7 = torch.nn.LeakyReLU(0.2)
-        
-        self.linear4 = nn.Linear(64, 1)
-        self.activation8 = torch.nn.Sigmoid()
+            nn.Linear(1024, 512),
+            torch.nn.LeakyReLU(0.2),
+
+            nn.Linear(512, 64),
+            torch.nn.LeakyReLU(0.2),
+
+            nn.Linear(64, 1),
+            torch.nn.Sigmoid(),
+        ])
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.activation1(x)
-        x = self.conv2(x)
-        x = self.activation2(x)
-        x = self.conv3(x)
-        x = self.activation3(x)
-        x = self.conv4(x)
-        x = self.activation4(x)
-        x = self.flatten(x)
-        x = self.linear1(x)
-        x = self.activation5(x)
-        x = self.linear2(x)
-        x = self.activation6(x)
-        x = self.linear3(x)
-        x = self.activation7(x)
-        x = self.linear4(x)
-        x = self.activation8(x)
-
+        for layer in self.all_layers:
+            x = layer(x)
         return x
 
 from torch.utils.data import Dataset, DataLoader
