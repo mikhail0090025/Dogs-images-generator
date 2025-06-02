@@ -2,7 +2,7 @@ FROM python:3.9-slim AS builder
 WORKDIR /app
 COPY neural_net/requirements.txt /app/
 RUN apt-get update && apt-get install -y curl && \
-    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu && \
     pip cache purge
 
 FROM python:3.9-slim
@@ -18,4 +18,4 @@ USER root
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
     CMD curl -f http://localhost:8001/ || exit 1
 
-CMD sleep 5 && uvicorn endpoints:app --host 0.0.0.0 --port 8001
+CMD sleep 2 && uvicorn endpoints:app --host 0.0.0.0 --port 8001

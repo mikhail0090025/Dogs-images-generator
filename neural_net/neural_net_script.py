@@ -1,5 +1,3 @@
-import tensorflow as tf
-from tensorflow import keras
 import numpy as np
 import requests
 import io
@@ -7,16 +5,23 @@ import tempfile
 import random
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+import torch
+import torch.nn as nn
+import torch.optim as optim
 
 # Глобальные переменные
+noise_size = 128
 generator_net = None
 discriminator_net = None
+optimizer_D = None
+optimizer_G = None
 gan = None
 images = None
 images_shape = None
 d_losses = []
 g_losses = []
 print("Variables are reset")
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def get_global_variables():
     global images_shape, images
@@ -48,187 +53,373 @@ def get_global_variables():
         print(f"Unexpected error: {e}")
         raise
 
+class GeneratorModel(nn.Module):
+    def __init__(self, noise_size=noise_size):
+        super(GeneratorModel, self).__init__()
+        self.noise_size = noise_size
+        '''
+        self.all_layers = nn.ModuleList([
+            nn.Linear(noise_size, 1024),
+            nn.LeakyReLU(0.2),
+
+            nn.Linear(1024, 2 * 2 * 512),
+            nn.LeakyReLU(0.2),
+
+            nn.Linear(2 * 2 * 512, 2 * 2 * 512),
+            nn.LeakyReLU(0.2),
+
+            nn.Unflatten(1, (512, 2, 2)),
+
+            nn.ConvTranspose2d(512, 256, 4, stride=2, padding=1),  # 2x2 → 4x4
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(256, 256, 3, padding=1),  # 4x4 → 4x4
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2),
+
+            nn.ConvTranspose2d(256, 128, 4, stride=2, padding=1),  # 4x4 → 8x8
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(128, 128, 3, padding=1),  # 8x8 → 8x8
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2),
+
+            nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),  # 8x8 → 16x16
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(64, 64, 3, padding=1),  # 16x16 → 16x16
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2),
+
+            nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),  # 16x16 → 32x32
+            nn.BatchNorm2d(32),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(32, 32, 3, padding=1),  # 32x32 → 32x32
+            nn.BatchNorm2d(32),
+            nn.LeakyReLU(0.2),
+
+            nn.ConvTranspose2d(32, 16, 4, stride=2, padding=1),  # 32x32 → 64x64
+            nn.BatchNorm2d(16),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(16, 16, 3, padding=1),  # 64x64 → 64x64
+            nn.BatchNorm2d(16),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(16, 3, 3, padding=1),  # 64x64 → 64x64x3
+            nn.BatchNorm2d(3),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(3, 3, 3, padding=1),
+            nn.BatchNorm2d(3),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(3, 3, 3, padding=1),
+            nn.BatchNorm2d(3),
+            nn.Sigmoid(),
+        ])
+        '''
+        self.all_layers = nn.ModuleList([
+            nn.Linear(noise_size, 1024),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+
+            nn.Linear(1024, 2 * 2 * 512),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+
+            nn.Linear(2 * 2 * 512, 2 * 2 * 512),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+
+            nn.Unflatten(1, (512, 2, 2)),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(512, 256, 3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(256, 256, 3, padding=1),  # 4x4 → 4x4
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(256, 128, 3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(128, 128, 3, padding=1),  # 8x8 → 8x8
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(128, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(64, 64, 3, padding=1),  # 16x16 → 16x16
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(64, 32, 3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(32, 32, 3, padding=1),  # 32x32 → 32x32
+            nn.BatchNorm2d(32),
+            nn.LeakyReLU(0.2),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(32, 16, 3, padding=1),
+            nn.BatchNorm2d(16),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(16, 16, 3, padding=1),  # 64x64 → 64x64
+            nn.BatchNorm2d(16),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(16, 3, 3, padding=1),  # 64x64 → 64x64x3
+            nn.BatchNorm2d(3),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(3, 3, 3, padding=1),
+            nn.BatchNorm2d(3),
+            nn.Sigmoid(),
+        ])
+
+    def forward(self, x):
+        for layer in self.all_layers:
+            x = layer(x)
+        return x
+
+class DiscriminatorModel(nn.Module):
+
+    def __init__(self):
+        super(DiscriminatorModel, self).__init__()
+        self.all_layers = nn.ModuleList([
+            torch.nn.Conv2d(3, 64, 3, padding=1, stride=2),
+            nn.BatchNorm2d(64),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+
+            torch.nn.Conv2d(64, 128, 3, padding=1, stride=2),
+            nn.BatchNorm2d(128),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+
+            torch.nn.Conv2d(128, 256, 3, padding=1, stride=2),
+            nn.BatchNorm2d(256),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+
+            torch.nn.Conv2d(256, 512, 3, padding=1, stride=2),
+            nn.BatchNorm2d(512),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+
+            torch.nn.Conv2d(512, 1024, 3, padding=1, stride=2),
+            nn.BatchNorm2d(1024),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+
+            nn.Flatten(),
+
+            nn.Linear(4096, 1024),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+
+            nn.Linear(1024, 512),
+            torch.nn.LeakyReLU(0.2),
+
+            nn.Linear(512, 64),
+            torch.nn.LeakyReLU(0.2),
+
+            nn.Linear(64, 1),
+            torch.nn.Sigmoid(),
+        ])
+
+    def forward(self, x):
+        for layer in self.all_layers:
+            x = layer(x)
+        return x
+
+from torch.utils.data import Dataset, DataLoader
+
+class DogsDataset(Dataset):
+    def __init__(self, images):
+        self.images = torch.tensor(images, dtype=torch.float32).permute(0, 3, 1, 2)
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        return self.images[idx]
+
 def get_models():
-    global discriminator_net, generator_net
-    generator_net = keras.models.Sequential([
-        keras.layers.Input(shape=(128,)),
-        keras.layers.Dense(2*2*1024, use_bias=False),
-        keras.layers.BatchNormalization(),
-        tf.keras.layers.LeakyReLU(),
-        tf.keras.layers.Reshape((2,2,1024)),
+    global discriminator_net, generator_net, optimizer_G, optimizer_D
+    generator_net = GeneratorModel().to(device)
+    discriminator_net = DiscriminatorModel().to(device)
 
-        # Первый слой: 2x2 → 4x4
-        tf.keras.layers.UpSampling2D((2, 2)),
-        tf.keras.layers.Conv2D(1024, 3, padding='same', use_bias=False),
-        keras.layers.BatchNormalization(),
-        tf.keras.layers.LeakyReLU(),
+    optimizer_G = torch.optim.Adam(generator_net.parameters(), lr=0.0002, betas=(0.5, 0.999))
+    optimizer_D = torch.optim.Adam(discriminator_net.parameters(), lr=0.0002, betas=(0.5, 0.999))
 
-        # Второй слой: 4x4 → 8x8
-        tf.keras.layers.UpSampling2D((2, 2)),
-        tf.keras.layers.Conv2D(512, 3, padding='same', use_bias=False),
-        keras.layers.BatchNormalization(),
-        tf.keras.layers.LeakyReLU(),
+    print("Generator model structure:")
+    print(generator_net)
+    print("Discriminator model structure:")
+    print(discriminator_net)
 
-        # Третий слой: 8x8 → 16x16
-        tf.keras.layers.UpSampling2D((2, 2)),
-        tf.keras.layers.Conv2D(256, 3, padding='same', use_bias=False),
-        keras.layers.BatchNormalization(),
-        tf.keras.layers.LeakyReLU(),
-
-        # Четвёртый слой: 16x16 → 32x32
-        tf.keras.layers.UpSampling2D((2, 2)),
-        tf.keras.layers.Conv2D(192, 3, padding='same', use_bias=False),
-        keras.layers.BatchNormalization(),
-        tf.keras.layers.LeakyReLU(),
-
-        # Пятый слой: 32x32 → 64x64
-        tf.keras.layers.UpSampling2D((2, 2)),
-        tf.keras.layers.Conv2D(128, 3, padding='same', use_bias=False),
-        keras.layers.BatchNormalization(),
-        tf.keras.layers.LeakyReLU(),
-
-        # Шестой слой: 64x64 → 128x128
-        # tf.keras.layers.UpSampling2D((2, 2)),
-        # tf.keras.layers.Conv2D(64, 3, padding='same', use_bias=False),
-        # keras.layers.BatchNormalization(),
-        # tf.keras.layers.LeakyReLU(),
-
-        # Выходной слой: 128x128x3
-        tf.keras.layers.Conv2D(3, 3, padding='same', use_bias=False, activation='sigmoid')
-    ])
-    discriminator_net = keras.models.Sequential([
-        keras.layers.Input(shape=(64,64,3)),
-
-        tf.keras.layers.Conv2D(256, 3, strides=(2, 2), padding='same'),
-        #keras.layers.Dropout(0.2),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2D(512, 3, strides=(2, 2), padding='same'),
-        #keras.layers.Dropout(0.2),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2D(1024, 3, strides=(2, 2), padding='same'),
-        #keras.layers.Dropout(0.1),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2D(2048, 3, strides=(2, 2), padding='same'),
-        #keras.layers.Dropout(0.1),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.Conv2D(2048, 3, strides=(1,1), padding='same'),
-        #keras.layers.Dropout(0.1),
-        tf.keras.layers.LeakyReLU(),
-
-        tf.keras.layers.GlobalAveragePooling2D(),
-        tf.keras.layers.Flatten(),
-
-        keras.layers.Dense(2048, activation="relu"),
-        keras.layers.Dense(1024, activation="relu"),
-        keras.layers.Dense(256, activation="relu"),
-        keras.layers.Dense(64, activation="relu"),
-        keras.layers.Dense(32, activation="relu"),
-
-        keras.layers.Dense(1, activation='sigmoid'),
-    ])
-
-    optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.0005, beta_1=0.5)
-    optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.0005, beta_1=0.5)
-
-    generator_net.compile(optimizer=optimizer_g, loss='binary_crossentropy')
-    discriminator_net.compile(optimizer=optimizer_d, loss='binary_crossentropy')
-
-    generator_net.summary()
-    discriminator_net.summary()
-
-    return generator_net, discriminator_net
+    return generator_net, discriminator_net, optimizer_G, optimizer_D
 
 def generate_image():
     global generator_net
     if generator_net is None:
         raise ValueError("Generator network is not initialized. Call main() first.")
-    noise = np.random.normal(0, 1, (1, 128))
+    noise = torch.randn(1, noise_size).to(device)
 
-    generated = generator_net.predict(noise, verbose=1)
-    generated = generated[0]
-    factor = max(generated.max(), abs(generated.min()))
-    generated = generated / factor
-    print("Data min/max:", generated.min(), generated.max())
+    with torch.no_grad():
+        generated = generator_net(noise)
+        print("Generated shape:", generated.shape)  # Expecting (1, 3, 64, 64)
+        print("Data min/max:", generated.min().item(), generated.max().item())
 
-    if generated.min() < 0:
-        generated = (generated + 1) / 2.0
-    generated = np.clip(generated, 0, 1)
+        if generated.min().item() < 0:
+            generated = (generated + 1) / 2.0
+        generated = torch.clamp(generated, 0, 1)
+
+        generated = generated.squeeze(0)  # (1, 3, 64, 64) → (3, 64, 64)
+        generated = generated.permute(1, 2, 0).cpu().numpy()  # (3, 64, 64) → (64, 64, 3)
 
     return generated
 
-def go_one_epoch(batch_size, generator_net, discriminator_net, gan):
-    global images, d_losses, g_losses
+def train_one_epoch(generator_net, discriminator_net, optimizer_G, optimizer_D, dataloader, criterion):
+    global d_losses, g_losses
+    for real_images in dataloader:
+        batch_size = real_images.size(0)
+        real_images = real_images.to(device)
+
+        # Обучение дискриминатора
+        optimizer_D.zero_grad()
+        real_labels = torch.ones(batch_size, 1).to(device) * 0.9  # Label smoothing
+        output_real = discriminator_net(real_images)
+        d_loss_real = criterion(output_real, real_labels)
+
+        noise = torch.randn(batch_size, noise_size).to(device)
+        fake_images = generator_net(noise)
+        fake_labels = torch.zeros(batch_size, 1).to(device)
+        output_fake = discriminator_net(fake_images.detach())
+        d_loss_fake = criterion(output_fake, fake_labels)
+
+        d_loss = (d_loss_real + d_loss_fake) / 2
+        d_loss.backward()
+        optimizer_D.step()
+
+        # Обучение генератора
+        optimizer_G.zero_grad()
+        real_labels = torch.ones(batch_size, 1).to(device)  # Хотим, чтобы фейковые изображения казались настоящими
+        output = discriminator_net(fake_images)
+        g_loss = criterion(output, real_labels)
+        g_loss.backward()
+        optimizer_G.step()
+
+        d_losses.append(d_loss.item())
+        g_losses.append(g_loss.item())
+
+    return d_loss.item(), g_loss.item()
+
+def train_one_epoch_generator(generator_net, discriminator_net, optimizer_G, dataloader, criterion):
+    global g_losses
+    for real_images in dataloader:
+        batch_size = real_images.size(0)
+        real_images = real_images.to(device)
+
+        # Обучение только генератора
+        optimizer_G.zero_grad()
+        noise = torch.randn(batch_size, noise_size).to(device)
+        fake_images = generator_net(noise)
+        real_labels = torch.ones(batch_size, 1).to(device)
+        output = discriminator_net(fake_images)
+        g_loss = criterion(output, real_labels)
+        g_loss.backward()
+        optimizer_G.step()
+
+        g_losses.append(g_loss.item())
+
+    return g_loss.item()
+
+def train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D, dataloader, criterion):
+    global d_losses
+    for real_images in dataloader:
+        batch_size = real_images.size(0)
+        real_images = real_images.to(device)
+
+        # Обучение только дискриминатора
+        optimizer_D.zero_grad()
+        real_labels = torch.ones(batch_size, 1).to(device) * 0.9  # Label smoothing
+        output_real = discriminator_net(real_images)
+        d_loss_real = criterion(output_real, real_labels)
+
+        noise = torch.randn(batch_size, noise_size).to(device)
+        fake_images = generator_net(noise)
+        fake_labels = torch.zeros(batch_size, 1).to(device)
+        output_fake = discriminator_net(fake_images.detach())
+        d_loss_fake = criterion(output_fake, fake_labels)
+
+        d_loss = (d_loss_real + d_loss_fake) / 2
+        d_loss.backward()
+        optimizer_D.step()
+
+        d_losses.append(d_loss.item())
+
+    return d_loss.item()
+
+def train_epochs(epochs_count, batch_size, generator_net, discriminator_net, optimizer_G, optimizer_D):
+    global images
     if images is None:
         raise ValueError("Images are not loaded. Call get_global_variables() first.")
-    idx = np.random.randint(0, images.shape[0], batch_size)
-    real_imgs = images[idx]
+    
+    dataset = DogsDataset(images)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    criterion = nn.BCELoss()
 
-    noise = np.random.normal(0, 1, (batch_size, 128))
-    fake_imgs = generator_net.predict(noise, verbose=1)
+    for epoch in range(epochs_count):
+        d_loss, g_loss = train_one_epoch(generator_net, discriminator_net, optimizer_G, optimizer_D, dataloader, criterion)
+        print(f"Epoch {epoch+1}/{epochs_count}: D Loss: {d_loss:.4f}, G Loss: {g_loss:.4f}")
 
-    print("Fake imgs min/max:", fake_imgs.min(), fake_imgs.max())
+    print(f"{epochs_count} epochs passed!")
 
-    generator_net.trainable = False
-    d_loss_real = discriminator_net.train_on_batch(real_imgs, np.ones((batch_size, 1)))
-    d_loss_fake = discriminator_net.train_on_batch(fake_imgs, np.zeros((batch_size, 1)))
-    generator_net.trainable = True
-    d_loss = 0.5 * (d_loss_real + d_loss_fake)
-
-    discriminator_net.trainable = False
-    noise = np.random.normal(0, 1, (batch_size, 128))
-    g_loss = gan.train_on_batch(noise, np.ones((batch_size, 1)))
-    discriminator_net.trainable = True
-
-    d_losses.append(d_loss)
-    g_losses.append(g_loss)
-
-    return d_loss, g_loss
-
-def go_one_epoch_generator(batch_size, generator_net, discriminator_net, gan):
-    global images, d_losses, g_losses
+def train_epochs_generator(epochs_count, batch_size, generator_net, discriminator_net, optimizer_G):
+    global images
     if images is None:
         raise ValueError("Images are not loaded. Call get_global_variables() first.")
+    
+    dataset = DogsDataset(images)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    criterion = nn.BCELoss()
 
-    noise = np.random.normal(0, 1, (batch_size, 128))
-    fake_imgs = generator_net.predict(noise, verbose=1)
+    for epoch in range(epochs_count):
+        g_loss = train_one_epoch_generator(generator_net, discriminator_net, optimizer_G, dataloader, criterion)
+        print(f"Epoch {epoch+1}/{epochs_count}: G Loss: {g_loss:.4f}")
 
-    print("Fake imgs min/max:", fake_imgs.min(), fake_imgs.max())
+    print(f"{epochs_count} epochs passed!")
 
-    noise = np.random.normal(0, 1, (batch_size, 128))
-    discriminator_net.trainable = False
-    g_loss = gan.train_on_batch(noise, np.ones((batch_size, 1)))
-    discriminator_net.trainable = True
-
-    g_losses.append(g_loss)
-
-    return g_loss
-
-def go_one_epoch_discriminator(batch_size, generator_net, discriminator_net, gan):
-    global images, d_losses, g_losses
+def train_epochs_discriminator(epochs_count, batch_size, generator_net, discriminator_net, optimizer_D):
+    global images
     if images is None:
         raise ValueError("Images are not loaded. Call get_global_variables() first.")
-    idx = np.random.randint(0, images.shape[0], batch_size)
-    real_imgs = images[idx]
+    
+    dataset = DogsDataset(images)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    criterion = nn.BCELoss()
 
-    noise = np.random.normal(0, 1, (batch_size, 128))
-    fake_imgs = generator_net.predict(noise, verbose=1)
+    for epoch in range(epochs_count):
+        d_loss = train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D, dataloader, criterion)
+        print(f"Epoch {epoch+1}/{epochs_count}: D Loss: {d_loss:.4f}")
 
-    print("Fake imgs min/max:", fake_imgs.min(), fake_imgs.max())
-
-    generator_net.trainable = False
-    d_loss_real = discriminator_net.train_on_batch(real_imgs, np.ones((batch_size, 1)))
-    d_loss_fake = discriminator_net.train_on_batch(fake_imgs, np.zeros((batch_size, 1)))
-    generator_net.trainable = True
-    d_loss = 0.5 * (d_loss_real + d_loss_fake)
-
-    d_losses.append(d_loss)
-    g_losses.append(g_losses[-1])
-
-    return d_loss
+    print(f"{epochs_count} epochs passed!")
 
 def plot_losses():
     fig = go.Figure(
@@ -245,33 +436,10 @@ def plot_losses():
 
     return fig
 
-def go_epochs(epochs_count, batch_size):
-    global generator_net, discriminator_net, gan
-    if any(x is None for x in [generator_net, discriminator_net, gan]):
-        raise ValueError("Models are not initialized. Call main() first.")
-    for i in range(epochs_count):
-        d_loss, g_loss = go_one_epoch(batch_size, generator_net, discriminator_net, gan)
-        print(f"Epoch {i+1}/{epochs_count}: D Loss: {d_loss}, G Loss: {g_loss}")
-    print(f"{epochs_count} epochs passed!")
-
-def go_epochs_discriminator(epochs_count, batch_size):
-    global generator_net, discriminator_net, gan
-    if any(x is None for x in [generator_net, discriminator_net, gan]):
-        raise ValueError("Models are not initialized. Call main() first.")
-    for i in range(epochs_count):
-        d_loss = go_one_epoch_discriminator(batch_size, generator_net, discriminator_net, gan)
-        print(f"Epoch {i+1}/{epochs_count}: D Loss: {d_loss}")
-    print(f"{epochs_count} epochs passed!")
-
 def main():
-    global gan, generator_net, discriminator_net
+    global gan, generator_net, discriminator_net, optimizer_G, optimizer_D
     get_global_variables()
-    generator_net, discriminator_net = get_models()
-    gan_input = tf.keras.layers.Input(shape=(128,))
-    gan_output = discriminator_net(generator_net(gan_input))
-    gan = tf.keras.Model(gan_input, gan_output)
-    print("Variables are defined")
-    gan.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.0005), loss='binary_crossentropy')
+    generator_net, discriminator_net, optimizer_G, optimizer_D = get_models()
 
 if __name__ == '__main__':
     main()
