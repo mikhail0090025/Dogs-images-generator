@@ -138,6 +138,10 @@ class GeneratorModel(nn.Module):
 
             nn.Unflatten(1, (1024, 2, 2)),
 
+            nn.Conv2d(1024, 1024, 3, padding=1),  # 2x2 → 2x2
+            nn.BatchNorm2d(1024),
+            nn.LeakyReLU(0.2),
+
             nn.Upsample(scale_factor=2, mode='nearest'),
             nn.Conv2d(1024, 512, 3, padding=1),
             nn.BatchNorm2d(512),
