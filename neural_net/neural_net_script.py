@@ -217,44 +217,34 @@ class DiscriminatorModel(nn.Module):
     def __init__(self):
         super(DiscriminatorModel, self).__init__()
         self.all_layers = nn.ModuleList([
-            torch.nn.Conv2d(3, 64, 3, padding=1, stride=2),
+            torch.nn.Conv2d(3, 16, 3, padding=1, stride=2),
+            nn.BatchNorm2d(16),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.4),
+
+            torch.nn.Conv2d(16, 32, 3, padding=1, stride=2),
+            nn.BatchNorm2d(32),
+            torch.nn.LeakyReLU(0.2),
+            nn.Dropout(0.4),
+
+            torch.nn.Conv2d(32, 64, 3, padding=1, stride=2),
             nn.BatchNorm2d(64),
             torch.nn.LeakyReLU(0.2),
             nn.Dropout(0.4),
 
-            torch.nn.Conv2d(64, 128, 3, padding=1, stride=2),
+            torch.nn.Conv2d(64, 128, 3, padding=1, stride=1),
             nn.BatchNorm2d(128),
             torch.nn.LeakyReLU(0.2),
             nn.Dropout(0.4),
 
-            torch.nn.Conv2d(128, 256, 3, padding=1, stride=2),
+            torch.nn.Conv2d(128, 256, 3, padding=1, stride=1),
             nn.BatchNorm2d(256),
-            torch.nn.LeakyReLU(0.2),
-            nn.Dropout(0.4),
-
-            torch.nn.Conv2d(256, 512, 3, padding=1, stride=1),
-            nn.BatchNorm2d(512),
-            torch.nn.LeakyReLU(0.2),
-            nn.Dropout(0.4),
-
-            torch.nn.Conv2d(512, 1024, 3, padding=1, stride=1),
-            nn.BatchNorm2d(1024),
             torch.nn.LeakyReLU(0.2),
             nn.Dropout(0.4),
 
             nn.Flatten(),
 
-            nn.Linear(4096*4*4, 2048),
-            torch.nn.LeakyReLU(0.2),
-            nn.Dropout(0.4),
-
-            nn.Linear(2048, 512),
-            torch.nn.LeakyReLU(0.2),
-
-            nn.Linear(512, 64),
-            torch.nn.LeakyReLU(0.2),
-
-            nn.Linear(64, 1),
+            nn.Linear(1024*4*4, 1),
             torch.nn.Sigmoid(),
         ])
 
@@ -312,42 +302,20 @@ def generate_image():
 
 def train_one_epoch(generator_net, discriminator_net, optimizer_G, optimizer_D, dataloader, criterion):
     global d_losses, g_losses
-    for real_images in dataloader:
-        batch_size = real_images.size(0)
-        real_images = real_images.to(device)
+    d_loss = train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D, dataloader, criterion)
 
-        # Обучение дискриминатора
-        optimizer_D.zero_grad()
-        real_labels = torch.ones(batch_size, 1).to(device) * 0.9  # Label smoothing
-        output_real = discriminator_net(real_images)
-        d_loss_real = criterion(output_real, real_labels)
+    g_loss = train_one_epoch_generator(generator_net, discriminator_net, optimizer_G, dataloader, criterion)
 
-        noise = torch.randn(batch_size, noise_size).to(device)
-        fake_images = generator_net(noise)
-        fake_labels = torch.zeros(batch_size, 1).to(device)
-        output_fake = discriminator_net(fake_images.detach())
-        d_loss_fake = criterion(output_fake, fake_labels)
-
-        d_loss = (d_loss_real + d_loss_fake) / 2
-        d_loss.backward()
-        optimizer_D.step()
-
-        # Обучение генератора
-        optimizer_G.zero_grad()
-        real_labels = torch.ones(batch_size, 1).to(device)  # Хотим, чтобы фейковые изображения казались настоящими
-        output = discriminator_net(fake_images)
-        g_loss = criterion(output, real_labels)
-        g_loss.backward()
-        optimizer_G.step()
-
-        d_losses.append(d_loss.item())
-        g_losses.append(g_loss.item())
+    # d_losses.append(d_loss.item())
+    # g_losses.append(g_loss.item())
 
     return d_loss.item(), g_loss.item()
 
 def train_one_epoch_generator(generator_net, discriminator_net, optimizer_G, dataloader, criterion):
     global g_losses
-    for real_images in dataloader:
+    for i, real_images in enumerate(dataloader):
+        for param in discriminator_net.parameters():
+            param.requires_grad_(False)
         batch_size = real_images.size(0)
         real_images = real_images.to(device)
 
@@ -361,15 +329,22 @@ def train_one_epoch_generator(generator_net, discriminator_net, optimizer_G, dat
         g_loss.backward()
         optimizer_G.step()
 
+        for param in discriminator_net.parameters():
+            param.requires_grad_(True)
+
+        print(f"Batch {i+1}/{len(dataloader)}  G loss: {g_loss.item()}")
+
         g_losses.append(g_loss.item())
 
-    return g_loss.item()
+    return g_loss
 
 def train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D, dataloader, criterion):
     global d_losses
-    for real_images in dataloader:
+    for i, real_images in enumerate(dataloader):
         batch_size = real_images.size(0)
         real_images = real_images.to(device)
+        for param in generator_net.parameters():
+            param.requires_grad_(False)
 
         # Обучение только дискриминатора
         optimizer_D.zero_grad()
@@ -387,9 +362,67 @@ def train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D,
         d_loss.backward()
         optimizer_D.step()
 
+        for param in generator_net.parameters():
+            param.requires_grad_(True)
+        
+        print(f"Batch {i+1}/{len(dataloader)}  D loss: {d_loss.item()}")
+
         d_losses.append(d_loss.item())
 
-    return d_loss.item()
+    return d_loss
+
+def train_one_epoch_by_batches(generator_net, discriminator_net, optimizer_D, dataloader, criterion):
+    global d_losses, g_losses
+    for i, real_images in enumerate(dataloader):
+        batch_size = real_images.size(0)
+        real_images = real_images.to(device)
+        for param in generator_net.parameters():
+            param.requires_grad_(False)
+
+        # Обучение только дискриминатора
+        optimizer_D.zero_grad()
+        real_labels = torch.ones(batch_size, 1).to(device) * 0.9  # Label smoothing
+        output_real = discriminator_net(real_images)
+        d_loss_real = criterion(output_real, real_labels)
+
+        noise = torch.randn(batch_size, noise_size).to(device)
+        fake_images = generator_net(noise)
+        fake_labels = torch.zeros(batch_size, 1).to(device)
+        output_fake = discriminator_net(fake_images.detach())
+        d_loss_fake = criterion(output_fake, fake_labels)
+
+        d_loss = (d_loss_real + d_loss_fake) / 2
+        d_loss.backward()
+        optimizer_D.step()
+
+        for param in generator_net.parameters():
+            param.requires_grad_(True)
+
+        for param in discriminator_net.parameters():
+            param.requires_grad_(False)
+        batch_size = real_images.size(0)
+        real_images = real_images.to(device)
+
+        # Обучение только генератора
+        optimizer_G.zero_grad()
+        noise = torch.randn(batch_size, noise_size).to(device)
+        fake_images = generator_net(noise)
+        real_labels = torch.ones(batch_size, 1).to(device)
+        output = discriminator_net(fake_images)
+        g_loss = criterion(output, real_labels)
+        g_loss.backward()
+        optimizer_G.step()
+
+        for param in discriminator_net.parameters():
+            param.requires_grad_(True)
+
+        print(f"Batch {i+1}/{len(dataloader)}  D loss: {d_loss.item()}  G loss: {g_loss.item()}")
+
+        d_losses.append(d_loss.item())
+        g_losses.append(g_loss.item())
+
+    return d_loss, g_loss
+
 
 def train_epochs(epochs_count, batch_size, generator_net, discriminator_net, optimizer_G, optimizer_D):
     global images
@@ -403,6 +436,20 @@ def train_epochs(epochs_count, batch_size, generator_net, discriminator_net, opt
     for epoch in range(epochs_count):
         d_loss, g_loss = train_one_epoch(generator_net, discriminator_net, optimizer_G, optimizer_D, dataloader, criterion)
         print(f"Epoch {epoch+1}/{epochs_count}: D Loss: {d_loss:.4f}, G Loss: {g_loss:.4f}")
+
+    print(f"{epochs_count} epochs passed!")
+
+def train_epochs_by_batches(epochs_count, batch_size, generator_net, discriminator_net, optimizer_G, optimizer_D):
+    global images
+    if images is None:
+        raise ValueError("Images are not loaded. Call get_global_variables() first.")
+    
+    dataset = DogsDataset(images)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    criterion = nn.BCELoss()
+
+    for epoch in range(epochs_count):
+        train_one_epoch_by_batches(generator_net, discriminator_net, optimizer_G, optimizer_D, dataloader, criterion)
 
     print(f"{epochs_count} epochs passed!")
 
