@@ -53,6 +53,8 @@ def get_global_variables():
         print(f"Unexpected error: {e}")
         raise
 
+relu_alpha = 0.2
+
 class GeneratorModel(nn.Module):
     def __init__(self, noise_size=noise_size):
         super(GeneratorModel, self).__init__()
@@ -60,63 +62,63 @@ class GeneratorModel(nn.Module):
         '''
         self.all_layers = nn.ModuleList([
             nn.Linear(noise_size, 1024),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Linear(1024, 2 * 2 * 512),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Linear(2 * 2 * 512, 2 * 2 * 512),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Unflatten(1, (512, 2, 2)),
 
             nn.ConvTranspose2d(512, 256, 4, stride=2, padding=1),  # 2x2 → 4x4
             nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Conv2d(256, 256, 3, padding=1),  # 4x4 → 4x4
             nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.ConvTranspose2d(256, 128, 4, stride=2, padding=1),  # 4x4 → 8x8
             nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Conv2d(128, 128, 3, padding=1),  # 8x8 → 8x8
             nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),  # 8x8 → 16x16
             nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Conv2d(64, 64, 3, padding=1),  # 16x16 → 16x16
             nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),  # 16x16 → 32x32
             nn.BatchNorm2d(32),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Conv2d(32, 32, 3, padding=1),  # 32x32 → 32x32
             nn.BatchNorm2d(32),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.ConvTranspose2d(32, 16, 4, stride=2, padding=1),  # 32x32 → 64x64
             nn.BatchNorm2d(16),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Conv2d(16, 16, 3, padding=1),  # 64x64 → 64x64
             nn.BatchNorm2d(16),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Conv2d(16, 3, 3, padding=1),  # 64x64 → 64x64x3
             nn.BatchNorm2d(3),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Conv2d(3, 3, 3, padding=1),
             nn.BatchNorm2d(3),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Conv2d(3, 3, 3, padding=1),
             nn.BatchNorm2d(3),
@@ -124,78 +126,65 @@ class GeneratorModel(nn.Module):
         ])
         '''
         self.all_layers = nn.ModuleList([
-            nn.Linear(noise_size, 1024, bias=False),
-            nn.LeakyReLU(0.2),
-            nn.Dropout(0.3),
-
-            nn.Linear(1024, 2 * 2 * 1024, bias=False),
-            nn.LeakyReLU(0.2),
-            nn.Dropout(0.3),
-
-            nn.Linear(2 * 2 * 1024, 2 * 2 * 1024, bias=False),
-            nn.LeakyReLU(0.2),
-            nn.Dropout(0.3),
+            nn.Linear(noise_size, 2 * 2 * 1024, bias=False),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Unflatten(1, (1024, 2, 2)),
 
             nn.Conv2d(1024, 1024, 3, padding=1),  # 2x2 → 2x2
             nn.BatchNorm2d(1024),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Upsample(scale_factor=2, mode='nearest'),
             nn.Conv2d(1024, 512, 3, padding=1),
             nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
-            nn.Conv2d(512, 512, 3, padding=1),  # 4x4 → 4x4
+            nn.Conv2d(512, 512, 5, padding=2),  # 4x4 → 4x4
             nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2),
-
-            nn.Conv2d(512, 512, 3, padding=1),  # 4x4 → 4x4
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Upsample(scale_factor=2, mode='nearest'),
             nn.Conv2d(512, 256, 3, padding=1),
             nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
-            nn.Conv2d(256, 256, 3, padding=1),  # 8x8 → 8x8
+            nn.Conv2d(256, 256, 5, padding=2),  # 8x8 → 8x8
             nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Upsample(scale_factor=2, mode='nearest'),
             nn.Conv2d(256, 128, 3, padding=1),
             nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
-            nn.Conv2d(128, 128, 3, padding=1),  # 16x16 → 16x16
+            nn.Conv2d(128, 128, 5, padding=2),  # 16x16 → 16x16
             nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Upsample(scale_factor=2, mode='nearest'),
             nn.Conv2d(128, 64, 3, padding=1),
             nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
-            nn.Conv2d(64, 64, 3, padding=1),  # 32x32 → 32x32
+            nn.Conv2d(64, 64, 5, padding=2),  # 32x32 → 32x32
             nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
             nn.Upsample(scale_factor=2, mode='nearest'),
             nn.Conv2d(64, 32, 3, padding=1),
             nn.BatchNorm2d(32),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
-            nn.Conv2d(32, 32, 3, padding=1),  # 64x64 → 64x64
+            nn.Conv2d(32, 32, 5, padding=2),  # 64x64 → 64x64
             nn.BatchNorm2d(32),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
-            nn.Conv2d(32, 3, 3, padding=1),  # 64x64 → 64x64x3
+            nn.Conv2d(32, 3, 5, padding=2),  # 64x64 → 64x64x3
             nn.BatchNorm2d(3),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(relu_alpha),
 
-            nn.Conv2d(3, 3, 3, padding=1),
+            nn.Conv2d(3, 3, 5, padding=2),
             nn.BatchNorm2d(3),
             nn.Sigmoid(),
         ])
@@ -217,34 +206,49 @@ class DiscriminatorModel(nn.Module):
     def __init__(self):
         super(DiscriminatorModel, self).__init__()
         self.all_layers = nn.ModuleList([
-            torch.nn.Conv2d(3, 16, 3, padding=1, stride=2),
-            nn.BatchNorm2d(16),
-            torch.nn.LeakyReLU(0.2),
+            torch.nn.Conv2d(3, 32, 3, padding=1, stride=2),
+            nn.BatchNorm2d(32),
+            torch.nn.LeakyReLU(relu_alpha),
             nn.Dropout(0.4),
 
-            torch.nn.Conv2d(16, 32, 3, padding=1, stride=2),
+            torch.nn.Conv2d(32, 32, 5, padding=2, stride=1),
             nn.BatchNorm2d(32),
-            torch.nn.LeakyReLU(0.2),
+            torch.nn.LeakyReLU(relu_alpha),
             nn.Dropout(0.4),
 
             torch.nn.Conv2d(32, 64, 3, padding=1, stride=2),
             nn.BatchNorm2d(64),
-            torch.nn.LeakyReLU(0.2),
+            torch.nn.LeakyReLU(relu_alpha),
             nn.Dropout(0.4),
 
-            torch.nn.Conv2d(64, 128, 3, padding=1, stride=1),
+            torch.nn.Conv2d(64, 64, 5, padding=2, stride=1),
+            nn.BatchNorm2d(64),
+            torch.nn.LeakyReLU(relu_alpha),
+            nn.Dropout(0.4),
+
+            torch.nn.Conv2d(64, 128, 3, padding=1, stride=2),
             nn.BatchNorm2d(128),
-            torch.nn.LeakyReLU(0.2),
+            torch.nn.LeakyReLU(relu_alpha),
             nn.Dropout(0.4),
 
-            torch.nn.Conv2d(128, 256, 3, padding=1, stride=1),
+            torch.nn.Conv2d(128, 128, 5, padding=2, stride=1),
+            nn.BatchNorm2d(128),
+            torch.nn.LeakyReLU(relu_alpha),
+            nn.Dropout(0.4),
+
+            torch.nn.Conv2d(128, 256, 3, padding=1, stride=2),
             nn.BatchNorm2d(256),
-            torch.nn.LeakyReLU(0.2),
+            torch.nn.LeakyReLU(relu_alpha),
+            nn.Dropout(0.4),
+
+            torch.nn.Conv2d(256, 512, 5, padding=2, stride=2),
+            nn.BatchNorm2d(512),
+            torch.nn.LeakyReLU(relu_alpha),
             nn.Dropout(0.4),
 
             nn.Flatten(),
 
-            nn.Linear(1024*4*4, 1),
+            nn.Linear(2048, 1),
             torch.nn.Sigmoid(),
         ])
 
@@ -302,17 +306,17 @@ def generate_image():
 
 def train_one_epoch(generator_net, discriminator_net, optimizer_G, optimizer_D, dataloader, criterion):
     global d_losses, g_losses
-    d_loss = train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D, dataloader, criterion)
 
     g_loss = train_one_epoch_generator(generator_net, discriminator_net, optimizer_G, dataloader, criterion)
+    d_loss = train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D, dataloader, criterion)
 
     # d_losses.append(d_loss.item())
     # g_losses.append(g_loss.item())
 
     return d_loss.item(), g_loss.item()
 
-def train_one_epoch_generator(generator_net, discriminator_net, optimizer_G, dataloader, criterion):
-    global g_losses
+def train_one_epoch_generator(generator_net, discriminator_net, optimizer_G, dataloader, criterion, add_last_values = False):
+    global g_losses, d_losses
     for i, real_images in enumerate(dataloader):
         for param in discriminator_net.parameters():
             param.requires_grad_(False)
@@ -335,10 +339,12 @@ def train_one_epoch_generator(generator_net, discriminator_net, optimizer_G, dat
         print(f"Batch {i+1}/{len(dataloader)}  G loss: {g_loss.item()}")
 
         g_losses.append(g_loss.item())
+        if add_last_values:
+            d_losses.append(d_losses[-1])
 
     return g_loss
 
-def train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D, dataloader, criterion):
+def train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D, dataloader, criterion, add_last_values = False):
     global d_losses
     for i, real_images in enumerate(dataloader):
         batch_size = real_images.size(0)
@@ -368,6 +374,8 @@ def train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D,
         print(f"Batch {i+1}/{len(dataloader)}  D loss: {d_loss.item()}")
 
         d_losses.append(d_loss.item())
+        if add_last_values:
+            g_losses.append(g_losses[-1])
 
     return d_loss
 
@@ -449,11 +457,11 @@ def train_epochs_by_batches(epochs_count, batch_size, generator_net, discriminat
     criterion = nn.BCELoss()
 
     for epoch in range(epochs_count):
-        train_one_epoch_by_batches(generator_net, discriminator_net, optimizer_G, optimizer_D, dataloader, criterion)
+        train_one_epoch_by_batches(generator_net, discriminator_net, optimizer_D, dataloader, criterion)
 
     print(f"{epochs_count} epochs passed!")
 
-def train_epochs_generator(epochs_count, batch_size, generator_net, discriminator_net, optimizer_G):
+def train_epochs_generator(epochs_count, batch_size, generator_net, discriminator_net, optimizer_G, add_last_values = False):
     global images
     if images is None:
         raise ValueError("Images are not loaded. Call get_global_variables() first.")
@@ -463,12 +471,12 @@ def train_epochs_generator(epochs_count, batch_size, generator_net, discriminato
     criterion = nn.BCELoss()
 
     for epoch in range(epochs_count):
-        g_loss = train_one_epoch_generator(generator_net, discriminator_net, optimizer_G, dataloader, criterion)
+        g_loss = train_one_epoch_generator(generator_net, discriminator_net, optimizer_G, dataloader, criterion, add_last_values)
         print(f"Epoch {epoch+1}/{epochs_count}: G Loss: {g_loss:.4f}")
 
     print(f"{epochs_count} epochs passed!")
 
-def train_epochs_discriminator(epochs_count, batch_size, generator_net, discriminator_net, optimizer_D):
+def train_epochs_discriminator(epochs_count, batch_size, generator_net, discriminator_net, optimizer_D, add_last_values = False):
     global images
     if images is None:
         raise ValueError("Images are not loaded. Call get_global_variables() first.")
@@ -478,7 +486,7 @@ def train_epochs_discriminator(epochs_count, batch_size, generator_net, discrimi
     criterion = nn.BCELoss()
 
     for epoch in range(epochs_count):
-        d_loss = train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D, dataloader, criterion)
+        d_loss = train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D, dataloader, criterion, add_last_values)
         print(f"Epoch {epoch+1}/{epochs_count}: D Loss: {d_loss:.4f}")
 
     print(f"{epochs_count} epochs passed!")

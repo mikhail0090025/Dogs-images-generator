@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <link rel="stylesheet" href="static/styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/1.33.1/plotly.min.js" integrity="sha512-V0j9LhrK9IMNdFYZqh+IqU4cjo7wdxyHNyH+L0td4HryBuZ7Oq6QxP2/CWr6TituX31+gv5PnolvERuTbz8UNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
@@ -11,6 +12,18 @@
     <div>
         <h3>Generated image</h3>
         <img src="http://localhost:8001/generate" alt="Image loading error" width="128px" height="auto">
+    </div>
+    <div>
+        <h4>Learn</h4>
+        <label for="epochs_count_label">Epochs count: </label>
+        <input type="number" name="epochs_count_label" id="epochs_count_label" value="1">
+        <label for="epochs_count_label">Batch size: </label>
+        <input type="number" name="bs_label" id="bs_label" value="64">
+        <br>
+        <button id="common_epochs_button">Go common epochs</button>
+        <button id="epochs_by_batches_button">Go epochs by batches</button>
+        <button id="epochs_d_button">Go epochs for discriminator</button>
+        <button id="epochs_g_button">Go epochs for generator</button>
     </div>
     <div>
         <div id="loss_graph"></div>
@@ -26,6 +39,57 @@
                     console.error('Error loading graphic:', error);
                 });
         }
+        function get_epochs() {
+            return document.getElementById('epochs_count_label').value;
+        }
+        function get_bs() {
+            return document.getElementById('bs_label').value;
+        }
+
+        document.getElementById('common_epochs_button').addEventListener('click', () => {
+            const requestOptions = {
+                method: "POST",
+                redirect: "follow"
+            };
+
+            fetch("http://localhost:8001/pass_epochs?epochs_count=" + get_epochs() + "&batch_size=" + get_bs(), requestOptions)
+            .then((response) => response.text())
+            .then((result) => console.log(result))
+            .catch((error) => console.error(error));
+        });
+        document.getElementById('epochs_by_batches_button').addEventListener('click', () => {
+            const requestOptions = {
+                method: "POST",
+                redirect: "follow"
+            };
+
+            fetch("http://localhost:8001/pass_epochs_by_batches?epochs_count=" + get_epochs() + "&batch_size=" + get_bs(), requestOptions)
+            .then((response) => response.text())
+            .then((result) => console.log(result))
+            .catch((error) => console.error(error));
+        });
+        document.getElementById('epochs_d_button').addEventListener('click', () => {
+            const requestOptions = {
+                method: "POST",
+                redirect: "follow"
+            };
+
+            fetch("http://localhost:8001/pass_epochs_discriminator?epochs_count=" + get_epochs() + "&batch_size=" + get_bs(), requestOptions)
+            .then((response) => response.text())
+            .then((result) => console.log(result))
+            .catch((error) => console.error(error));
+        });
+        document.getElementById('epochs_g_button').addEventListener('click', () => {
+            const requestOptions = {
+                method: "POST",
+                redirect: "follow"
+            };
+
+            fetch("http://localhost:8001/pass_epochs_generator?epochs_count=" + get_epochs() + "&batch_size=" + get_bs(), requestOptions)
+            .then((response) => response.text())
+            .then((result) => console.log(result))
+            .catch((error) => console.error(error));
+        });
 
         window.onload = loadGraph;
     </script>

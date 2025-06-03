@@ -6,6 +6,9 @@ import neural_net_script
 import io
 from PIL import Image
 import numpy as np
+import torch
+from torchvision import transforms
+import requests
 
 app = FastAPI()
 
@@ -74,8 +77,8 @@ def pass_epochs_endpoint(epochs_count, batch_size):
 
         print(f"Epochs count: {epochs_count}")
         print(f"Batch size: {batch_size}")
-        asyncio.run(neural_net_script.train_epochs(int(epochs_count), int(batch_size), neural_net_script.generator_net, neural_net_script.discriminator_net, neural_net_script.optimizer_G, neural_net_script.optimizer_D))
-        return Response(f"{epochs_count} Epochs were passed", status_code=200)
+        asyncio.run(neural_net_script.train_epochs_by_batches(int(epochs_count), int(batch_size), neural_net_script.generator_net, neural_net_script.discriminator_net, neural_net_script.optimizer_G, neural_net_script.optimizer_D))
+        return Response(f"{epochs_count} Epochs by batches were passed", status_code=200)
     except Exception as e:
         print(f"Error has occurred: {e}")
         return Response(f"Error has occurred: {e}", status_code=500)
@@ -90,8 +93,24 @@ def pass_epochs_discriminator_endpoint(epochs_count, batch_size):
 
         print(f"Epochs count: {epochs_count}")
         print(f"Batch size: {batch_size}")
-        asyncio.run(neural_net_script.train_epochs_discriminator(int(epochs_count), int(batch_size), neural_net_script.generator_net, neural_net_script.discriminator_net, neural_net_script.optimizer_D))
+        asyncio.run(neural_net_script.train_epochs_discriminator(int(epochs_count), int(batch_size), neural_net_script.generator_net, neural_net_script.discriminator_net, neural_net_script.optimizer_D, True))
         return Response(f"{epochs_count} Epochs for discriminator were passed", status_code=200)
+    except Exception as e:
+        print(f"Error has occurred: {e}")
+        return Response(f"Error has occurred: {e}", status_code=500)
+
+@app.post("/pass_epochs_generator")
+def pass_epochs_discriminator_endpoint(epochs_count, batch_size):
+    try:
+        if not epochs_count:
+            return Response({'error': 'No epochs_count provided'}, status_code=400)
+        if not batch_size:
+            return Response({'error': 'No batch_size provided'}, status_code=400)
+
+        print(f"Epochs count: {epochs_count}")
+        print(f"Batch size: {batch_size}")
+        asyncio.run(neural_net_script.train_epochs_generator(int(epochs_count), int(batch_size), neural_net_script.generator_net, neural_net_script.discriminator_net, neural_net_script.optimizer_G, True))
+        return Response(f"{epochs_count} Epochs for generator were passed", status_code=200)
     except Exception as e:
         print(f"Error has occurred: {e}")
         return Response(f"Error has occurred: {e}", status_code=500)
@@ -106,6 +125,52 @@ def graphic():
         }
     except Exception as e:
         return {'Response': f'Unexpected error has occured: {e}, ({type(e)})'}, 500
+
+@app.post("/predict_discriminator")
+def predict_discriminator_endpoint(image_url: str = Form(...)):
+    try:
+        # Проверяем, что URL передан
+        print(f"Fetching image from URL: {image_url}")
+        if not image_url:
+            return Response("No image URL provided", status_code=400)
+
+        # Загружаем изображение по URL
+        response = requests.get(image_url, timeout=10)
+        if response.status_code != 200:
+            print(f"Failed to fetch image from URL: {image_url}, status code: {response.status_code}")
+            return Response(f"Failed to fetch image from URL: {image_url}", status_code=400)
+
+        # Открываем изображение из байтов
+        img = Image.open(io.BytesIO(response.content)).convert('RGB')  # Конвертируем в RGB
+
+        # Подготавливаем трансформации (как для тренировочных данных)
+        transform = transforms.Compose([
+            transforms.Resize((64, 64)),  # Предполагаю, что вход дискриминатора 64x64
+            transforms.ToTensor(),  # Конвертируем в тензор [0, 1]
+        ])
+        img_tensor = transform(img).unsqueeze(0)  # Добавляем размерность батча: [1, 3, 64, 64]
+
+        # Переносим на устройство
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        img_tensor = img_tensor.to(device)
+
+        # Пропускаем через дискриминатор
+        with torch.no_grad():  # Отключаем градиенты для инференса
+            prediction = neural_net_script.discriminator_net(img_tensor)
+            prediction = torch.sigmoid(prediction).item()  # Применяем сигмоиду и берём скаляр
+
+        # Возвращаем предсказание (0 - фейк, 1 - реальное)
+        return {
+            "image_url": image_url,
+            "discriminator_prediction": prediction,
+            "interpretation": "Real" if prediction > 0.5 else "Fake"
+        }
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching image from URL: {e}")
+        return Response(f"Error fetching image from URL: {e}", status_code=400)
+    except Exception as e:
+        print(f"Error has occurred: {e}")
+        return Response(f"Error has occurred: {e}", status_code=500)
 
 if __name__ == '__main__':
     neural_net_script.main()

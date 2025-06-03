@@ -1,0 +1,121 @@
+/* Сбрасываем стандартные отступы и задаём коробочную модель */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Общий стиль для страницы */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f0f0;
+    color: #333;
+    padding: 20px;
+    text-align: center;
+}
+
+/* Заголовок страницы */
+h1 {
+    font-size: 2.5em;
+    margin-bottom: 20px;
+    color: #4a4a4a;
+}
+
+/* Секции с отступами */
+div {
+    margin-bottom: 30px;
+}
+
+/* Подзаголовки */
+h3 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    color: #4a4a4a;
+}
+
+h4 {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+    color: #4a4a4a;
+}
+
+/* Стиль для изображения */
+img {
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    padding: 5px;
+    background-color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Метки и поля ввода */
+label {
+    font-size: 1em;
+    margin-right: 10px;
+}
+
+input[type="number"] {
+    padding: 5px;
+    margin-right: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 100px;
+    text-align: center;
+}
+
+/* Кнопки */
+button {
+    padding: 10px 20px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+    background-color: #007bff;
+    color: #fff;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* График */
+#loss_graph {
+    width: 80%;
+    height: 400px;
+    margin: 20px auto;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background-color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Адаптивность для маленьких экранов */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 2em;
+    }
+
+    h3 {
+        font-size: 1.2em;
+    }
+
+    input[type="number"] {
+        width: 80px;
+    }
+
+    button {
+        padding: 8px 15px;
+        font-size: 0.9em;
+    }
+
+    #loss_graph {
+        width: 100%;
+        height: 300px;
+    }
+}

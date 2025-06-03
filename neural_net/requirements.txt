@@ -1,6 +1,7 @@
 # tensorflow-cpu==2.19.0
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.7.0+cpu
+torchvision==0.22.0+cpu
 matplotlib==3.9.4
 uvicorn==0.34.2
 fastapi==0.115.12
