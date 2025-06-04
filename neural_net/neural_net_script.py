@@ -258,13 +258,13 @@ def train_one_epoch_discriminator(generator_net, discriminator_net, optimizer_D,
 
         # Обучение только дискриминатора
         optimizer_D.zero_grad()
-        real_labels = torch.ones(batch_size, 1).to(device) * 0.9  # Label smoothing
+        real_labels = torch.ones(batch_size, 1).to(device)
         output_real = discriminator_net(real_images)
         d_loss_real = criterion(output_real, real_labels)
 
         noise = torch.randn(batch_size, noise_size).to(device)
         fake_images = generator_net(noise)
-        fake_labels = torch.full((batch_size, 1), 0.1, device=device)
+        fake_labels = torch.full((batch_size, 1), 0.0, device=device)
         output_fake = discriminator_net(fake_images.detach())
         d_loss_fake = criterion(output_fake, fake_labels)
 
@@ -293,13 +293,13 @@ def train_one_epoch_by_batches(generator_net, discriminator_net, optimizer_D, da
 
         # Обучение только дискриминатора
         optimizer_D.zero_grad()
-        real_labels = torch.ones(batch_size, 1).to(device) * 0.9  # Label smoothing
+        real_labels = torch.ones(batch_size, 1).to(device)
         output_real = discriminator_net(real_images)
         d_loss_real = criterion(output_real, real_labels)
 
         noise = torch.randn(batch_size, noise_size).to(device)
         fake_images = generator_net(noise)
-        fake_labels = torch.full((batch_size, 1), 0.1, device=device)
+        fake_labels = torch.full((batch_size, 1), 0.0, device=device)
         output_fake = discriminator_net(fake_images.detach())
         d_loss_fake = criterion(output_fake, fake_labels)
 
