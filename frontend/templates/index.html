@@ -8,7 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/1.33.1/plotly.min.js" integrity="sha512-V0j9LhrK9IMNdFYZqh+IqU4cjo7wdxyHNyH+L0td4HryBuZ7Oq6QxP2/CWr6TituX31+gv5PnolvERuTbz8UNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
-    <h1>Dogs pictures generator</h1>
+    <h1>Cats pictures generator</h1>
     <div>
         <h3>Generated image</h3>
         <img src="http://localhost:8001/generate" alt="Image loading error" width="128px" height="auto">
@@ -18,7 +18,7 @@
         <label for="epochs_count_label">Epochs count: </label>
         <input type="number" name="epochs_count_label" id="epochs_count_label" value="1">
         <label for="epochs_count_label">Batch size: </label>
-        <input type="number" name="bs_label" id="bs_label" value="64">
+        <input type="number" name="bs_label" id="bs_label" value="128">
         <br>
         <button id="common_epochs_button">Go common epochs</button>
         <button id="epochs_by_batches_button">Go epochs by batches</button>
@@ -54,7 +54,7 @@
 
             fetch("http://localhost:8001/pass_epochs?epochs_count=" + get_epochs() + "&batch_size=" + get_bs(), requestOptions)
             .then((response) => response.text())
-            .then((result) => console.log(result))
+            .then((result) => alert(result))
             .catch((error) => console.error(error));
         });
         document.getElementById('epochs_by_batches_button').addEventListener('click', () => {
@@ -65,7 +65,7 @@
 
             fetch("http://localhost:8001/pass_epochs_by_batches?epochs_count=" + get_epochs() + "&batch_size=" + get_bs(), requestOptions)
             .then((response) => response.text())
-            .then((result) => console.log(result))
+            .then((result) => alert(result))
             .catch((error) => console.error(error));
         });
         document.getElementById('epochs_d_button').addEventListener('click', () => {
@@ -76,7 +76,7 @@
 
             fetch("http://localhost:8001/pass_epochs_discriminator?epochs_count=" + get_epochs() + "&batch_size=" + get_bs(), requestOptions)
             .then((response) => response.text())
-            .then((result) => console.log(result))
+            .then((result) => alert(result))
             .catch((error) => console.error(error));
         });
         document.getElementById('epochs_g_button').addEventListener('click', () => {
@@ -87,7 +87,7 @@
 
             fetch("http://localhost:8001/pass_epochs_generator?epochs_count=" + get_epochs() + "&batch_size=" + get_bs(), requestOptions)
             .then((response) => response.text())
-            .then((result) => console.log(result))
+            .then((result) => alert(result))
             .catch((error) => console.error(error));
         });
 

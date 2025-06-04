@@ -63,42 +63,43 @@ class GeneratorModel(nn.Module):
 
         self.all_layers = nn.ModuleList([
             # Начало: шум → 2×2×512
-            nn.Linear(noise_size, 2 * 2 * 512, bias=False),
+            nn.Linear(noise_size, 2 * 2 * 256, bias=False),
             nn.LeakyReLU(relu_alpha),
-            nn.Unflatten(1, (512, 2, 2)),
+            nn.Unflatten(1, (256, 2, 2)),
 
             # 2×2 → 4×4
-            nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(512, 256, 3, padding=1),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(relu_alpha),
-
-            # 4×4 → 8×8
             nn.Upsample(scale_factor=2, mode='nearest'),
             nn.Conv2d(256, 128, 3, padding=1),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(relu_alpha),
 
-            # 8×8 → 16×16
+            # 4×4 → 8×8
             nn.Upsample(scale_factor=2, mode='nearest'),
             nn.Conv2d(128, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
 
+            # 8×8 → 16×16
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(64, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(relu_alpha),
+
             # 16×16 → 32×32
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(64, 32, 3, padding=1),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(64, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
 
             # 32×32 → 64×64
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(32, 32, 3, padding=1),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(64, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
 
             # Финальный слой сглаживания
-            nn.Conv2d(32, 3, 5, padding=2),
+            nn.Conv2d(64, 3, 3, padding=1),
+            nn.Conv2d(3, 3, 3, padding=1),
             nn.Tanh(),
         ])
 
