@@ -75,7 +75,7 @@ async def get_images():
                     await download_dataset(session, url, zip_path)
             await extract_zip(zip_path, current_dir)
 
-        dog_folder = os.path.join(dataset_directory, "Cat")
+        dog_folder = os.path.join(dataset_directory, "Dog")
         if not os.path.exists(dog_folder):
             raise Exception(f"Dog folder not found: {dog_folder}")
 
