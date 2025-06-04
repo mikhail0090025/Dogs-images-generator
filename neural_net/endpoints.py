@@ -37,7 +37,8 @@ async def generate_endpoint():
         generated = neural_net_script.generate_image()
 
         # Преобразуем numpy-массив в изображение
-        generated = (generated * 255).astype(np.uint8)  # Преобразуем в [0, 255] и uint8
+        generated = generated + 1
+        generated = (generated * 127.5).astype(np.uint8)  # Преобразуем в [0, 255] и uint8
         img = Image.fromarray(generated)
 
         # Сохраняем изображение в байты
@@ -157,7 +158,8 @@ def predict_discriminator_endpoint(image_url: str = Form(...)):
         # Пропускаем через дискриминатор
         with torch.no_grad():  # Отключаем градиенты для инференса
             prediction = neural_net_script.discriminator_net(img_tensor)
-            prediction = torch.sigmoid(prediction).item()  # Применяем сигмоиду и берём скаляр
+            # prediction = torch.sigmoid(prediction).item()  # Применяем сигмоиду и берём скаляр
+            prediction = prediction.item()
 
         # Возвращаем предсказание (0 - фейк, 1 - реальное)
         return {

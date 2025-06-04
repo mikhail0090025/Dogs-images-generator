@@ -38,7 +38,7 @@ async def extract_zip(zip_path, extract_to):
 async def process_images(folder):
     global images
     all_files = os.listdir(folder)
-    max_files_count = 1500
+    max_files_count = 2500
     for i, filename in enumerate(all_files[:max_files_count]):
         try:
             path = os.path.join(folder, filename)
@@ -46,7 +46,8 @@ async def process_images(folder):
             img = Image.open(path)
             img = img.convert("RGB")
             img_resized = img.resize(images_resolution, Image.Resampling.LANCZOS)
-            img_array = (np.array(img_resized) / 255.0).astype(np.float32)
+            img_array = (np.array(img_resized) / 127.5).astype(np.float32)
+            img_array = img_array - 1
             images.append(img_array)
             print("Dog image")
         except UnidentifiedImageError:
