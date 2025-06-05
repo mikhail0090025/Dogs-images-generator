@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torchvision import transforms
 
 # Глобальные переменные
 noise_size = 512
@@ -79,8 +80,18 @@ class GeneratorModel(nn.Module):
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
 
+            nn.Upsample(scale_factor=1, mode='nearest'),
+            nn.Conv2d(64, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(relu_alpha),
+
             # 8×8 → 16×16
             nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(64, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(relu_alpha),
+
+            nn.Upsample(scale_factor=1, mode='nearest'),
             nn.Conv2d(64, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
@@ -91,8 +102,18 @@ class GeneratorModel(nn.Module):
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
 
+            nn.Upsample(scale_factor=1, mode='nearest'),
+            nn.Conv2d(64, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(relu_alpha),
+
             # 32×32 → 64×64
             nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(64, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(relu_alpha),
+
+            nn.Upsample(scale_factor=1, mode='nearest'),
             nn.Conv2d(64, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
@@ -168,15 +189,36 @@ class DiscriminatorModel(nn.Module):
 
 from torch.utils.data import Dataset, DataLoader
 
+# class DogsDataset(Dataset):
+#     def __init__(self, images):
+#         self.images = torch.tensor(images, dtype=torch.float32).permute(0, 3, 1, 2)
+# 
+#     def __len__(self):
+#         return len(self.images)
+# 
+#     def __getitem__(self, idx):
+#         return self.images[idx]
+
 class DogsDataset(Dataset):
     def __init__(self, images):
-        self.images = torch.tensor(images, dtype=torch.float32).permute(0, 3, 1, 2)
+        self.images = torch.tensor(images, dtype=torch.float32).permute(0, 3, 1, 2)  # (N, H, W, C) → (N, C, H, W)
+        
+        # Определяем трансформации для аугментации
+        self.transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(p=0.5),
+            # transforms.RandomRotation(1),
+            # transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1),
+            transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
+        ])
 
     def __len__(self):
         return len(self.images)
 
     def __getitem__(self, idx):
-        return self.images[idx]
+        image = self.images[idx]
+        # if self.transform:
+        #     image = self.transform(image)
+        return image
 
 def get_models():
     global discriminator_net, generator_net, optimizer_G, optimizer_D
