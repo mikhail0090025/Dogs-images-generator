@@ -54,7 +54,24 @@ def get_global_variables():
         print(f"Unexpected error: {e}")
         raise
 
-relu_alpha = 0.2
+class SelfAttention(nn.Module):
+    def __init__(self, in_channels):
+        super(SelfAttention, self).__init__()
+        self.query = nn.Conv2d(in_channels, in_channels // 8, 1)
+        self.key = nn.Conv2d(in_channels, in_channels // 8, 1)
+        self.value = nn.Conv2d(in_channels, in_channels, 1)
+        self.gamma = nn.Parameter(torch.zeros(1))
+
+    def forward(self, x):
+        batch_size, C, H, W = x.size()
+        query = self.query(x).view(batch_size, -1, H * W).permute(0, 2, 1)
+        key = self.key(x).view(batch_size, -1, H * W)
+        energy = torch.bmm(query, key)
+        attention = torch.softmax(energy, dim=-1)
+        value = self.value(x).view(batch_size, -1, H * W)
+        out = torch.bmm(value, attention.permute(0, 2, 1))
+        out = out.view(batch_size, C, H, W)
+        return self.gamma * out + x
 
 class GeneratorModel(nn.Module):
     def __init__(self, noise_size=noise_size):
@@ -70,57 +87,39 @@ class GeneratorModel(nn.Module):
 
             # 2×2 → 4×4
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(256, 128, 3, padding=1),
+            nn.Conv2d(256, 128, 1),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(relu_alpha),
 
             # 4×4 → 8×8
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(128, 64, 3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(relu_alpha),
-
-            nn.Upsample(scale_factor=1, mode='nearest'),
-            nn.Conv2d(64, 64, 3, padding=1),
+            nn.Conv2d(128, 64, 1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
 
             # 8×8 → 16×16
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(64, 64, 3, padding=1),
+            nn.Conv2d(64, 64, 1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
-
-            nn.Upsample(scale_factor=1, mode='nearest'),
-            nn.Conv2d(64, 64, 3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(relu_alpha),
+            SelfAttention(64),
 
             # 16×16 → 32×32
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(64, 64, 3, padding=1),
+            nn.Conv2d(64, 64, 1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
-
-            nn.Upsample(scale_factor=1, mode='nearest'),
-            nn.Conv2d(64, 64, 3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(relu_alpha),
+            SelfAttention(64),
 
             # 32×32 → 64×64
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(64, 64, 3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(relu_alpha),
-
-            nn.Upsample(scale_factor=1, mode='nearest'),
-            nn.Conv2d(64, 64, 3, padding=1),
+            nn.Conv2d(64, 64, 1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
 
             # Финальный слой сглаживания
-            nn.Conv2d(64, 3, 3, padding=1),
-            nn.Conv2d(3, 3, 3, padding=1),
+            nn.Conv2d(64, 3, 1),
+            nn.Conv2d(3, 3, 1),
             nn.Tanh(),
         ])
 

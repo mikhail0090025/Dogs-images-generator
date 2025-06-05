@@ -76,10 +76,14 @@ async def get_images():
             await extract_zip(zip_path, current_dir)
 
         dog_folder = os.path.join(dataset_directory, "Dog")
+        cat_folder = os.path.join(dataset_directory, "Cat")
         if not os.path.exists(dog_folder):
             raise Exception(f"Dog folder not found: {dog_folder}")
+        if not os.path.exists(cat_folder):
+            raise Exception(f"Cat folder not found: {cat_folder}")
 
         await process_images(dog_folder)
+        # await process_images(cat_folder)
 
         images = np.array(images, dtype=np.float32)
         indexes = np.random.permutation(len(images))
