@@ -73,6 +73,26 @@ class SelfAttention(nn.Module):
         out = out.view(batch_size, C, H, W)
         return self.gamma * out + x
 
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(ResidualBlock, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=1)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.relu = nn.LeakyReLU(0.2)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+        self.shortcut = nn.Conv2d(in_channels, out_channels, 1) if in_channels != out_channels else nn.Identity()
+
+    def forward(self, x):
+        identity = self.shortcut(x)
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out += identity
+        return self.relu(out)
+
 class GeneratorModel(nn.Module):
     def __init__(self, noise_size=noise_size):
         super(GeneratorModel, self).__init__()
@@ -87,38 +107,40 @@ class GeneratorModel(nn.Module):
 
             # 2×2 → 4×4
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(256, 128, 1),
+            ResidualBlock(256, 128),
+            # nn.Conv2d(256, 128, 3, padding=1),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(relu_alpha),
 
             # 4×4 → 8×8
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(128, 64, 1),
+            nn.Conv2d(128, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
+            SelfAttention(64),
 
             # 8×8 → 16×16
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(64, 64, 1),
+            nn.Conv2d(64, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
             SelfAttention(64),
 
             # 16×16 → 32×32
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(64, 64, 1),
+            nn.Conv2d(64, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
             SelfAttention(64),
 
             # 32×32 → 64×64
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(64, 64, 1),
+            nn.Conv2d(64, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
 
             # Финальный слой сглаживания
-            nn.Conv2d(64, 3, 1),
+            nn.Conv2d(64, 3, 3, padding=1),
             nn.Conv2d(3, 3, 1),
             nn.Tanh(),
         ])
@@ -225,7 +247,7 @@ def get_models():
     discriminator_net = DiscriminatorModel().to(device)
 
     optimizer_G = torch.optim.Adam(generator_net.parameters(), lr=0.00005, betas=(0.5, 0.999))
-    optimizer_D = torch.optim.Adam(discriminator_net.parameters(), lr=0.00005, betas=(0.5, 0.999))
+    optimizer_D = torch.optim.Adam(discriminator_net.parameters(), lr=0.00001, betas=(0.5, 0.999))
 
     print("Generator model structure:")
     print(generator_net)

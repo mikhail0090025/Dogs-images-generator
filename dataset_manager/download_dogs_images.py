@@ -38,7 +38,7 @@ async def extract_zip(zip_path, extract_to):
 async def process_images(folder):
     global images
     all_files = os.listdir(folder)
-    max_files_count = 512
+    max_files_count = 1024
     for i, filename in enumerate(all_files[:max_files_count]):
         try:
             path = os.path.join(folder, filename)
@@ -76,11 +76,11 @@ async def get_images():
             await extract_zip(zip_path, current_dir)
 
         dog_folder = os.path.join(dataset_directory, "Dog")
-        cat_folder = os.path.join(dataset_directory, "Cat")
+        # cat_folder = os.path.join(dataset_directory, "Cat")
         if not os.path.exists(dog_folder):
             raise Exception(f"Dog folder not found: {dog_folder}")
-        if not os.path.exists(cat_folder):
-            raise Exception(f"Cat folder not found: {cat_folder}")
+        # if not os.path.exists(cat_folder):
+        #     raise Exception(f"Cat folder not found: {cat_folder}")
 
         await process_images(dog_folder)
         # await process_images(cat_folder)
