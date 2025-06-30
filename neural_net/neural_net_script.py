@@ -114,28 +114,32 @@ class GeneratorModel(nn.Module):
 
             # 4×4 → 8×8
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(128, 64, 3, padding=1),
+            ResidualBlock(128, 64),
+            # nn.Conv2d(128, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
             SelfAttention(64),
 
             # 8×8 → 16×16
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(64, 64, 3, padding=1),
+            ResidualBlock(64, 64),
+            # nn.Conv2d(64, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
             SelfAttention(64),
 
             # 16×16 → 32×32
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(64, 64, 3, padding=1),
+            ResidualBlock(64, 64),
+            # nn.Conv2d(64, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
             SelfAttention(64),
 
             # 32×32 → 64×64
             nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(64, 64, 3, padding=1),
+            ResidualBlock(64, 64),
+            # nn.Conv2d(64, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(relu_alpha),
 
